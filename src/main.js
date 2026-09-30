@@ -32,7 +32,7 @@ const counters = { skippedClosed: 0, skippedEmpty: 0, duplicates: 0 };
 const stats = {
     processed: 0, pushed: 0, filteredOut: 0, errors: 0, scoreSum: 0,
     byStatus: { none: 0, ok: 0, broken: 0, social_only: 0, free_subdomain: 0, dead_builder: 0, blocked: 0 },
-    charged: { [EVENTS.websiteAudited]: 0, [EVENTS.leadNoWebsite]: 0, [EVENTS.contactsExtracted]: 0 },
+    billable: { [EVENTS.websiteAudited]: 0, [EVENTS.leadNoWebsite]: 0, [EVENTS.contactsExtracted]: 0 },
 };
 
 // Businesses sharing one website (chains, franchises) are audited once.
@@ -102,13 +102,13 @@ async function processBusiness(business) {
     if (audit.websiteStatus !== 'blocked') event = audit.fetched ? EVENTS.websiteAudited : EVENTS.leadNoWebsite;
     const pushResult = event ? await Actor.pushData(row, event) : await Actor.pushData(row);
     stats.pushed++;
-    if (event) stats.charged[event]++;
+    if (event) stats.billable[event]++;
     if (pushResult?.eventChargeLimitReached) stopped = true;
 
     const foundContacts = options.extractContacts && Boolean(row.publicEmail || row.whatsapp || (sitePhone && row.phoneSource === 'website'));
     if (foundContacts && !stopped) {
         const chargeResult = await Actor.charge({ eventName: EVENTS.contactsExtracted });
-        stats.charged[EVENTS.contactsExtracted]++;
+        stats.billable[EVENTS.contactsExtracted]++;
         if (chargeResult?.eventChargeLimitReached) stopped = true;
     }
     if (stopped) log.warning('The run reached its maximum cost (set by the user); stopping after the businesses in progress.');
@@ -151,7 +151,7 @@ log.info('Summary', {
     rowsPushed: stats.pushed,
     filteredOutBelowMinScore: stats.filteredOut,
     skipped: { permanentlyClosed: counters.skippedClosed, empty: counters.skippedEmpty, duplicates: counters.duplicates, errors: stats.errors },
-    charged: stats.charged,
+    billableEvents: stats.billable, // what was charged, once pricing is active
 });
 await Actor.setStatusMessage(
     `Audited ${stats.processed} businesses: ${s.none} without a website, ${s.broken} broken, ${s.social_only} social only, `
