@@ -7,19 +7,24 @@ const firstRule = (rules, test) => rules.find(test) ?? null;
 const withArticle = (noun) => `${/^[aeiou]/i.test(noun) ? 'an' : 'a'} ${noun}`;
 
 /**
- * @returns {{ opportunityScore: number, opportunityReasons: string[], pitchAngle: string }}
+ * @returns {{ opportunityScore: number|null, opportunityReasons: string[], pitchAngle: string }}
+ *   opportunityScore is null when the site refused our check: nothing is known, so no score.
  */
 export function scoreBusiness(business, audit, now = new Date()) {
+    const status = audit.websiteStatus;
+    if (status === 'blocked') {
+        const why = audit.websiteError ?? 'the site blocks automated checks';
+        return { opportunityScore: null, opportunityReasons: [`Couldn't audit: ${why}`], pitchAngle: pitchAngle(business, audit, []) };
+    }
+
     const reasons = []; // { id, text, points, phrase? }
     const add = (id, points, text, phrase) => reasons.push({ id, points, text, phrase });
-    const status = audit.websiteStatus;
     const statusPoints = SCORING.status[status] ?? 0;
 
     if (status === 'none') add('none', statusPoints, 'No website');
     if (status === 'social_only') add('social_only', statusPoints, `Only ${withArticle(audit.socialPlatform ?? 'social media')} page, no website`);
     if (status === 'dead_builder') add('dead_builder', statusPoints, `Built on ${audit.deadBuilder}`);
     if (status === 'broken') add('broken', statusPoints, `Website not working: ${audit.websiteError ?? 'unknown error'}`);
-    if (status === 'blocked') add('blocked', 0, "Couldn't audit: the site blocks automated checks");
 
     const siteLoads = audit.fetched && (status === 'ok' || status === 'free_subdomain' || status === 'dead_builder') && audit.mobileFriendly !== null;
     if (siteLoads) {
@@ -50,7 +55,7 @@ export function scoreBusiness(business, audit, now = new Date()) {
     }
 
     const est = SCORING.establishedBusiness;
-    if (status !== 'blocked' && business.reviewCount >= est.minReviews && business.rating >= est.minRating) {
+    if (business.reviewCount >= est.minReviews && business.rating >= est.minRating) {
         add('established', est.points, `Established business (${business.reviewCount} reviews, rated ${business.rating})`);
     }
 
@@ -75,7 +80,7 @@ export function pitchAngle(business, audit, reasons) {
         case 'broken':
             return `${possessive} website isn't working right now (${audit.websiteError ?? 'it fails to load'}), so visitors hit a dead end.`;
         case 'blocked':
-            return `${possessive} website couldn't be checked automatically; review it by hand before reaching out.`;
+            return `Couldn't audit: ${audit.websiteError ?? 'the site blocks automated checks'}. Check ${possessive} website by hand before reaching out.`;
         case 'dead_builder':
             if (!audit.fetched || !audit.deadBuilder) break;
             return `${possessive} website is built on ${audit.deadBuilder.replace(/\s*\(.*\)$/, '')}, which has been discontinued, so it's due for a rebuild.`;

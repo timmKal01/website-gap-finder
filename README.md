@@ -26,7 +26,7 @@ Every business gets one **website status**:
 | `broken` | Doesn't load, doesn't resolve, errors, or is parked / for sale / suspended |
 | `dead_builder` | Built on a site builder that has shut down (Google Business Profile websites, Adobe Muse, Business Catalyst, FrontPage, iWeb...) |
 | `free_subdomain` | Lives on a free address like `salon.wixsite.com` or `plumber.blogspot.com` |
-| `blocked` | The site refuses automated checks (bot protection or robots.txt). Reported, never worked around, and free |
+| `blocked` | The site refuses automated checks (bot protection or robots.txt). Reported, never worked around, and free. These rows get no score (`opportunityScore: null`) and a "Couldn't audit" note, so they never pass for healthy sites |
 | `ok` | The site loads |
 
 For sites that load, it also checks:
@@ -50,11 +50,11 @@ The score adds up points for every gap found, capped at 100:
 | No website | 80 |
 | Only a social or listing page | 75 |
 | Broken site, or built on a dead builder | 70 |
+| On a free subdomain (e.g. `salon.wixsite.com`) | 50 |
 | Placeholder page ("coming soon") | 40 |
-| On a free subdomain | 25 |
+| Copyright 8+ years old (5-7 years: 20, 3-4 years: 10) | 40 |
 | No HTTPS / broken SSL certificate | 20 |
 | Not mobile friendly | 20 |
-| Copyright 5+ years old (3-4 years: 10) | 15 |
 | Appointment business (salon, clinic, dentist...) with no online booking | 12 |
 | Homepage over 5 seconds (over 3 seconds: 7) | 12 |
 | Outdated WordPress (below 6.0) | 10 |
@@ -62,8 +62,9 @@ The score adds up points for every gap found, capped at 100:
 | HTTP doesn't redirect to HTTPS | 5 |
 | No page title / no meta description | 5 each |
 
-Roughly: **80+** means no real website, **40-70** a site with serious problems, **under 20** a site
-in decent shape.
+Roughly: **70+** means no working website or a badly outdated one, **40-70** a site with clear
+problems (a Wix subdomain with no booking lands around 60, a footer stuck on 2012 around 40),
+**under 20** a site in decent shape. Sites that couldn't be audited have no score.
 
 ## Input
 
@@ -73,7 +74,7 @@ in decent shape.
 | `businesses` | array | Your own list: `name`, `website`, and optionally `phone`, `address`, `city`, `country` (name or 2-letter code) and `category`. |
 | `auditDepth` | `basic` / `full` | Basic checks the homepage. Full also opens the contact page when one is linked. Default `basic`. |
 | `extractContacts` | boolean | Pull the public business email, phone and WhatsApp link from the site. Default `false`. |
-| `onlyOpportunities` | boolean | Only save businesses scoring at least `minScore`. Default `false`. |
+| `onlyOpportunities` | boolean | Only save businesses scoring at least `minScore`. Sites that couldn't be audited are left out too. Default `false`. |
 | `minScore` | integer 0-100 | Default `50`. |
 | `maxConcurrency` | integer | Businesses audited at once. Default `10`. |
 
@@ -123,16 +124,17 @@ One row per business:
   "bookingProvider": null,
   "publicEmail": "info@example.com",
   "socialLinks": { "facebook": "https://www.facebook.com/exampleplumbing" },
-  "opportunityScore": 72,
-  "opportunityReasons": ["No HTTPS", "Not mobile friendly", "Copyright still says 2017", "Established business (48 reviews, rated 4.6)", "Slow homepage (3.4s)"],
-  "pitchAngle": "Example Plumbing Ltd's website isn't secure (no HTTPS) and isn't mobile friendly; a refresh could bring in more customers.",
+  "opportunityScore": 97,
+  "opportunityReasons": ["Copyright still says 2017", "No HTTPS", "Not mobile friendly", "Established business (48 reviews, rated 4.6)", "Slow homepage (3.4s)"],
+  "pitchAngle": "Example Plumbing Ltd's website still says © 2017 and isn't secure (no HTTPS); a refresh could bring in more customers.",
   "auditedAt": "2026-10-01T09:00:00.000Z"
 }
 ```
 
-Also included: `websiteError` (why a site counts as broken), `httpRedirectsToHttps`, `missingTitle`,
+Also included: `placeId` (from the source dataset, to join rows back), `websiteError` (why a site counts as broken), `httpRedirectsToHttps`, `missingTitle`,
 `missingMetaDescription`, `whatsapp`, and `phoneSource` (`input` or `website`). The **Outreach**
-view in the Output tab shows name, score, pitch, phone, email, WhatsApp and links side by side.
+view in the Output tab shows name, score, status, pitch, phone, email, WhatsApp and links side by
+side; sites that couldn't be audited show an empty score and a pitch starting "Couldn't audit".
 
 ## Example use cases
 

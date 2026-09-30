@@ -63,6 +63,8 @@ test('URL classification', () => {
 test('business email: generic or name-carrying mailboxes only, no named staff, no third parties', () => {
     const emails = extractEmails('Web design by pixels@agency.example. Dr. Jane Smith: jane.smith@austinsmiles.com. Front desk: hello [at] austinsmiles [dot] com', []);
     assert.deepEqual(emails, ['pixels@agency.example', 'jane.smith@austinsmiles.com', 'hello@austinsmiles.com']);
+    assert.deepEqual(extractEmails('Write to info @ salon.co.ke for bookings', []), ['info@salon.co.ke']);
+    assert.deepEqual(extractEmails('Designed by web @ agency.example. Dr. Jane', []), []);
     assert.equal(pickBusinessEmail(emails, { name: 'Austin Smiles Dental', siteUrl: 'https://www.austinsmiles.com/' }), 'hello@austinsmiles.com');
     assert.equal(pickBusinessEmail(['mercysbeauty@gmail.com'], { name: "Mercy's Beauty Parlour", siteUrl: 'https://mercysbeauty.co.ke/' }), 'mercysbeauty@gmail.com');
     assert.equal(pickBusinessEmail(['john.doe1985@gmail.com'], { name: 'Glow Salon', siteUrl: 'https://glow.example/' }), null);

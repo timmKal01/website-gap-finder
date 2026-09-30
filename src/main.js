@@ -30,7 +30,7 @@ log.info('Starting', { datasetId: datasetId || null, businesses: businesses.leng
 
 const counters = { skippedClosed: 0, skippedEmpty: 0, duplicates: 0 };
 const stats = {
-    processed: 0, pushed: 0, filteredOut: 0, errors: 0, scoreSum: 0,
+    processed: 0, pushed: 0, filteredOut: 0, filteredOutUnaudited: 0, errors: 0, scored: 0, scoreSum: 0,
     byStatus: { none: 0, ok: 0, broken: 0, social_only: 0, free_subdomain: 0, dead_builder: 0, blocked: 0 },
     billable: { [EVENTS.websiteAudited]: 0, [EVENTS.leadNoWebsite]: 0, [EVENTS.contactsExtracted]: 0 },
 };
@@ -63,6 +63,7 @@ async function processBusiness(business) {
         phone: inputPhone ?? sitePhone,
         phoneSource: inputPhone ? 'input' : sitePhone ? 'website' : null,
         mapsUrl: business.mapsUrl,
+        placeId: business.placeId, // to join rows back to the source dataset
         rating: business.rating,
         reviewCount: business.reviewCount,
         websiteUrl: audit.websiteUrl,
@@ -89,11 +90,19 @@ async function processBusiness(business) {
 
     stats.processed++;
     stats.byStatus[audit.websiteStatus] = (stats.byStatus[audit.websiteStatus] ?? 0) + 1;
-    stats.scoreSum += opportunityScore;
+    if (opportunityScore !== null) {
+        stats.scored++;
+        stats.scoreSum += opportunityScore;
+    }
 
+    // Not delivered, so not charged. Unaudited sites (score null) aren't opportunities we can vouch for.
+    if (options.onlyOpportunities && opportunityScore === null) {
+        stats.filteredOutUnaudited++;
+        return;
+    }
     if (options.onlyOpportunities && opportunityScore < options.minScore) {
         stats.filteredOut++;
-        return; // not delivered, so not charged
+        return;
     }
 
     // Charge for what the row cost to produce: a fetched site, or a lead with nothing to fetch.
@@ -137,7 +146,7 @@ async function runPool(iterable, concurrency, worker) {
 await runPool(loadBusinesses({ datasetId, businesses }, counters), options.maxConcurrency, processBusiness);
 
 const s = stats.byStatus;
-const averageScore = stats.processed ? Math.round(stats.scoreSum / stats.processed) : 0;
+const averageScore = stats.scored ? Math.round(stats.scoreSum / stats.scored) : null; // blocked sites have no score
 log.info('Summary', {
     processed: stats.processed,
     noWebsite: s.none,
@@ -150,12 +159,13 @@ log.info('Summary', {
     averageScore,
     rowsPushed: stats.pushed,
     filteredOutBelowMinScore: stats.filteredOut,
+    filteredOutUnaudited: stats.filteredOutUnaudited,
     skipped: { permanentlyClosed: counters.skippedClosed, empty: counters.skippedEmpty, duplicates: counters.duplicates, errors: stats.errors },
     billableEvents: stats.billable, // what was charged, once pricing is active
 });
 await Actor.setStatusMessage(
     `Audited ${stats.processed} businesses: ${s.none} without a website, ${s.broken} broken, ${s.social_only} social only, `
-    + `${s.dead_builder} on dead builders; average score ${averageScore}. ${stats.pushed} rows saved.`,
+    + `${s.dead_builder} on dead builders, ${s.blocked} couldn't be audited; average score ${averageScore ?? 'n/a'}. ${stats.pushed} rows saved.`,
     { isStatusMessageTerminal: true },
 );
 

@@ -37,13 +37,18 @@ export function extractEmails(text, mailtoHrefs = []) {
         if (labels.length > 2 && /^[A-Z]/.test(labels.at(-1)) && labels.slice(0, -1).every((l) => l === l.toLowerCase())) labels.pop();
         add(`${local}@${labels.join('.')}`);
     }
-    // Spelled-out addresses: "info [at] salon [dot] com", "sales at salon dot com".
+    // Spelled-out addresses: "info [at] salon [dot] com", "sales at salon dot com", "info @ salon.com".
     for (const m of String(text ?? '').matchAll(EMAIL_RE)) {
         const [whole, local, domain, tld] = m;
-        if (whole.includes('@')) continue; // handled by the strict pass above
-        const bracketed = /[[({<]\s*at\s*[\])}>]/i.test(whole);
-        if (!bracketed && !/\bdot\b|[[({<]\s*dot/i.test(whole)) continue;
-        if (PROSE_WORDS.has(local.toLowerCase())) continue;
+        if (whole.includes('@')) {
+            // Plain addresses were taken by the strict pass. Left: a spaced "info @ salon.com", kept
+            // only when its dots are tight, so no following sentence gets glued on.
+            if (!/\s@|@\s/.test(whole) || /\s\.|\.\s/.test(whole)) continue;
+        } else {
+            const bracketed = /[[({<]\s*at\s*[\])}>]/i.test(whole);
+            if (!bracketed && !/\bdot\b|[[({<]\s*dot/i.test(whole)) continue;
+            if (PROSE_WORDS.has(local.toLowerCase())) continue;
+        }
         let labels = domain.split(new RegExp(DOT, 'i'));
         let top = tld;
         if (/^[A-Z][a-z]/.test(tld) && labels.length > 1 && /^[a-z]{2,24}$/.test(labels.at(-1)) && domain === domain.toLowerCase()) {

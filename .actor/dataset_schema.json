@@ -21,7 +21,7 @@
         "outreach": {
             "title": "Outreach",
             "transformation": {
-                "fields": ["name", "category", "city", "opportunityScore", "pitchAngle", "phone", "publicEmail", "whatsapp", "websiteUrl", "mapsUrl"]
+                "fields": ["name", "category", "city", "opportunityScore", "websiteStatus", "pitchAngle", "phone", "publicEmail", "whatsapp", "websiteUrl", "mapsUrl"]
             },
             "display": {
                 "component": "table",
@@ -30,6 +30,7 @@
                     "category": { "label": "Category", "format": "text" },
                     "city": { "label": "City", "format": "text" },
                     "opportunityScore": { "label": "Score", "format": "number" },
+                    "websiteStatus": { "label": "Website status", "format": "text" },
                     "pitchAngle": { "label": "Pitch angle", "format": "text" },
                     "phone": { "label": "Phone", "format": "text" },
                     "publicEmail": { "label": "Email", "format": "text" },

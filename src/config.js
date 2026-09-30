@@ -36,9 +36,9 @@ export const SCORING = {
         social_only: 75, // only a Facebook/Instagram/TikTok/listing page
         dead_builder: 70, // built on a discontinued site builder
         broken: 70, // doesn't load, errors, parked or suspended
-        free_subdomain: 25, // e.g. salon.wixsite.com, no own domain
-        blocked: 0, // refused our automated check, so nothing is known
+        free_subdomain: 50, // e.g. salon.wixsite.com, no own domain
         ok: 0,
+        // "blocked" (the site refused our automated check) gets no score at all: opportunityScore is null.
     },
 
     // Problems on a site that loads. These add up.
@@ -49,8 +49,9 @@ export const SCORING = {
     placeholderPage: 40, // "coming soon" / "under construction"
     outdatedWordPress: 10,
     outdatedWordPressBelow: 6, // WordPress versions below 6.0 count as outdated
-    oldCopyright: [ // first matching rule wins
-        { yearsOld: 5, points: 15 },
+    oldCopyright: [ // first matching rule wins; 8+ years untouched counts strongly
+        { yearsOld: 8, points: 40 },
+        { yearsOld: 5, points: 20 },
         { yearsOld: 3, points: 10 },
     ],
     slowResponse: [ // homepage HTML load time, first matching rule wins
