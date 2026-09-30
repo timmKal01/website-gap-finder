@@ -2,13 +2,14 @@
 //   1. https://host/robots.txt   -> are we allowed, and does HTTPS work (valid certificate)?
 //   2. http://host/path           -> does HTTP redirect to HTTPS, how fast is it, and the page itself
 //   3. the contact page ("full")  -> more contact details and booking links
-// A site on HTTP only costs one more small request (http://host/robots.txt).
+// A site on HTTP only costs one more small request (http://host/robots.txt), and so does a dead
+// listed link (the homepage is audited instead) or an incomplete certificate chain.
 import * as cheerio from 'cheerio';
 import { detectTechStack } from 'tech-stack-signatures';
 import { HTTP } from '../config.js';
-import { getPage, isTlsError } from '../http.js';
+import { getPage, isTlsError, isIncompleteChain } from '../http.js';
 import { parseRobots, isAllowed } from '../robots.js';
-import { profilePlatform, freeHostSuffix, deadBuilderFromHost, deadBuilderFromGenerator, isDomainMarketplace } from './classify.js';
+import { profilePlatform, freeHostSuffix, deadBuilderFromHost, deadBuilderFromGenerator, isDomainMarketplace, domainCarriesName } from './classify.js';
 import {
     visibleText, isMobileFriendly, seoFacts, lastCopyrightYear, wordpressVersion, isPlaceholderPage,
     brokenPageReason, pageUrls, bookingInfo, socialLinks, contactPageUrl,
@@ -43,7 +44,7 @@ function baseResult(websiteUrl, websiteStatus, extra = {}) {
     return {
         websiteUrl, websiteStatus, websiteError: null, finalUrl: null, fetched: false,
         https: null, httpRedirectsToHttps: null, sslError: null, mobileFriendly: null, responseMs: null,
-        techStack: [], generator: null, wordpressVersion: null, deadBuilder: null, freeHost: null, placeholder: false,
+        techStack: [], generator: null, wordpressVersion: null, deadBuilder: null, freeHost: null, placeholder: false, listedLinkBroken: false,
         lastCopyrightYear: null, missingTitle: null, missingMetaDescription: null,
         hasBooking: null, bookingProvider: null, socialLinks: {}, socialPlatform: null,
         contacts: null,
@@ -108,16 +109,41 @@ export async function auditWebsite(business, { auditDepth, extractContacts, coun
     if (robots.blocked) return { ...result, websiteStatus: 'blocked', websiteError: 'site blocks automated checks (bot protection)' };
     if (!isAllowed(robots.rules, target.pathname)) return { ...result, websiteStatus: 'blocked', websiteError: 'robots.txt disallows automated checks' };
     result.https = robots.httpsWorks;
-    result.sslError = robots.tlsError;
+    result.sslError = isIncompleteChain(robots.tlsError) ? 'INCOMPLETE_CHAIN' : robots.tlsError;
 
     // 2. The page over plain HTTP, to see whether it's sent on to HTTPS.
+    const httpsUrl = `https://${target.host}${pathAndQuery}`;
     let page = await getPage(`http://${target.host}${pathAndQuery}`);
-    if (page.category === 'network_error' && robots.httpsWorks) {
-        // Nothing listening on port 80: fine for visitors, browsers go straight to HTTPS.
-        page = await getPage(`https://${target.host}${pathAndQuery}`);
-    } else if (page.ok) {
+    if (page.category !== 'network_error' && page.category !== 'blocked') {
         result.httpRedirectsToHttps = page.finalUrl?.startsWith('https:') ?? false;
     }
+    if (!page.ok && robots.httpsWorks && page.category !== 'blocked' && !page.finalUrl?.startsWith('https:')) {
+        // Nothing on port 80, or plain HTTP answers with an error page: browsers that go to
+        // HTTPS still get the site, so that's the one to audit.
+        page = await getPage(httpsUrl);
+    }
+    // Incomplete certificate chain: read the page anyway (see http.js) and report the certificate.
+    if (!page.ok && page.category === 'network_error' && [robots.tlsError, page.errorCode].some(isIncompleteChain)) {
+        const lenient = await getPage(httpsUrl, { lenientTls: true });
+        if (lenient.category !== 'network_error') {
+            page = lenient;
+            result.https = true;
+            result.sslError = 'INCOMPLETE_CHAIN';
+        }
+    }
+
+    // The listed link is a page that's gone, on what looks like the business's own domain: audit
+    // the homepage instead, and count the dead link as a gap of its own. (On a platform's domain,
+    // such as a booking site, the homepage isn't the business's, so the link stays broken.)
+    const homepageInstead = async (why) => {
+        if (target.pathname === '/' || !domainCarriesName(business.name, url) || !isAllowed(robots.rules, '/')) return null;
+        const home = await getPage(`${result.https ? 'https' : 'http'}://${target.host}/`, { lenientTls: result.sslError === 'INCOMPLETE_CHAIN' });
+        if (!home.ok) return null;
+        result.listedLinkBroken = true;
+        result.websiteError = `listed page not found (${why}), homepage audited instead`;
+        return home;
+    };
+    if (page.status === 404 || page.status === 410) page = (await homepageInstead(`HTTP ${page.status}`)) ?? page;
 
     if (!page.ok) {
         if (page.category === 'blocked') {
@@ -138,9 +164,20 @@ export async function auditWebsite(business, { auditDepth, extractContacts, coun
     }
     if (isDomainMarketplace(page.finalUrl)) return { ...result, websiteStatus: 'broken', websiteError: 'domain parked or for sale' };
 
-    const $ = cheerio.load(page.body);
-    const text = visibleText($);
-    const brokenReason = brokenPageReason($, page.body, text);
+    let $ = cheerio.load(page.body);
+    let text = visibleText($);
+    let brokenReason = brokenPageReason($, page.body, text);
+    if (brokenReason === 'Page not found') {
+        const home = await homepageInstead('page not found');
+        if (home) {
+            page = home;
+            result.finalUrl = page.finalUrl;
+            result.responseMs = page.elapsedMs;
+            $ = cheerio.load(page.body);
+            text = visibleText($);
+            brokenReason = brokenPageReason($, page.body, text);
+        }
+    }
     if (brokenReason) return { ...result, websiteStatus: 'broken', websiteError: brokenReason.toLowerCase() };
 
     const tech = detectTechStack({ headers: page.headers, html: page.body, $ });

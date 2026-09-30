@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { toBusinessRecord, normalizeWebsite } from '../src/sources/records.js';
 import { resolveCountry, countryFromHostname, toE164 } from '../src/phone.js';
-import { profilePlatform, freeHostSuffix, deadBuilderFromHost, deadBuilderFromGenerator } from '../src/audit/classify.js';
+import { profilePlatform, freeHostSuffix, deadBuilderFromHost, deadBuilderFromGenerator, domainCarriesName } from '../src/audit/classify.js';
 import { extractEmails, pickBusinessEmail, whatsappNumber } from '../src/audit/contacts.js';
 import { parseRobots, isAllowed } from '../src/robots.js';
 
@@ -83,4 +83,11 @@ test('robots.txt: our own group wins over *, longest rule wins', () => {
     assert.equal(isAllowed(rules, '/private/x'), false);
     assert.equal(isAllowed(parseRobots('User-agent: *\nDisallow: /', 'websitegapfinder'), '/'), false);
     assert.equal(isAllowed(parseRobots('User-agent: *\nDisallow:', 'websitegapfinder'), '/'), true);
+});
+
+test("a domain counts as the business's own only when it carries a distinctive word of the name", () => {
+    assert.equal(domainCarriesName('House of Treasures Beauty Salon', 'https://houseoftreasureskenya.com/beauty-salon'), true);
+    assert.equal(domainCarriesName('Posh Palace Hair Studio & Spa', 'https://www.welns.io/product/booking/WFRCHN000012914'), false);
+    assert.equal(domainCarriesName('Glam Hair Salon', 'https://salonbookings.com/glam-hair'), false);
+    assert.equal(freeHostSuffix('https://www.richmannadayspa.webs.com/'), 'webs.com');
 });

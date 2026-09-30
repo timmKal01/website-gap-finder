@@ -35,7 +35,7 @@ const FREE_HOST_SUFFIXES = [
     'ueniweb.com', 'carrd.co', 'myshopify.com', 'bigcartel.com', 'simplesite.com', 'squarespace.com',
     'webflow.io', 'framer.website', 'framer.ai', 'netlify.app', 'vercel.app', 'github.io', 'pages.dev',
     '000webhostapp.com', 'tumblr.com', 'hubspotpagebuilder.com', 'mailchimpsites.com', 'e-monsite.com',
-    'over-blog.com', 'webstarts.com',
+    'over-blog.com', 'webstarts.com', 'webs.com', 'gamma.site',
 ];
 const FREE_HOST_PATTERNS = [/(^|\.)blogspot\.[a-z.]+$/, /(^|\.)webnode\.[a-z.]+$/];
 
@@ -102,6 +102,25 @@ export function deadBuilderFromGenerator(generator) {
 export function isDomainMarketplace(url) {
     const host = hostOf(url);
     return host ? MARKETPLACE_HOSTS.test(host) : false;
+}
+
+// Words too common in business names to tell whose domain it is.
+const GENERIC_NAME_WORDS = new Set([
+    'the', 'and', 'limited', 'company', 'services', 'service', 'group', 'shop', 'store', 'centre', 'center',
+    'studio', 'house', 'home', 'best', 'your', 'hair', 'salon', 'salons', 'beauty', 'barber', 'barbers',
+    'barbershop', 'nail', 'nails', 'lounge', 'clinic', 'dental', 'dentist', 'dentistry', 'family', 'care',
+    'plumbing', 'plumber', 'plumbers', 'heating', 'city', 'online', 'book', 'booking', 'kenya', 'nairobi',
+]);
+
+/**
+ * Whether a URL's domain looks like the business's own ("houseoftreasureskenya.com" for "House of
+ * Treasures Beauty Salon"), as opposed to a platform page such as a booking site or a directory.
+ */
+export function domainCarriesName(name, url) {
+    const label = (getDomain(hostOf(url) ?? '') ?? '').split('.')[0];
+    const words = String(name ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+        .split(/[^a-z0-9]+/).filter((w) => w.length >= 4 && !GENERIC_NAME_WORDS.has(w));
+    return label.length >= 4 && words.some((w) => label.includes(w));
 }
 
 /** Same registrable domain ("www.x.co.uk" and "shop.x.co.uk" are the same site). */

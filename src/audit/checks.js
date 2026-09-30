@@ -73,7 +73,10 @@ const PARKED_LANDER_RE = /(window\.)?location(\.href)?\s*=\s*["']\/lander\b/i;
 const SUSPENDED_RE = /(account (has been )?suspended|this account has been suspended|website (is )?suspended|bandwidth limit exceeded|site (is )?(temporarily )?unavailable due to)/i;
 const DEFAULT_PAGE_RE = /^(apache2? .*default page|welcome to nginx!?|it works!?|index of \/|default web site page|test page for the (apache|nginx)|iis windows server|welcome to centos|site not found|web server'?s default page)|future home of something quite cool/i;
 
-/** A page that loads but isn't the business's site: parked, suspended or a server default page. */
+// "Page Not Found" served with status 200 (a soft 404).
+const NOT_FOUND_TITLE_RE = /(^|[^a-z0-9])(404|page not found|not found|page (could not|cannot|can't) be found)([^a-z0-9]|$)/i;
+
+/** A page that loads but isn't the business's site: parked, suspended, a server default page or a missing page. */
 export function brokenPageReason($, html, text) {
     const title = $('title').first().text().replace(/\s+/g, ' ').trim();
     const head = `${title} ${String(html ?? '').slice(0, 30_000)}`;
@@ -82,6 +85,7 @@ export function brokenPageReason($, html, text) {
     if (String(html ?? '').length < 3000 && PARKED_LANDER_RE.test(html)) return 'Domain parked or for sale';
     if (text.length < 4000 && SUSPENDED_RE.test(`${title} ${text}`)) return 'Hosting account suspended';
     if (DEFAULT_PAGE_RE.test(title) || (text.length < 600 && DEFAULT_PAGE_RE.test(text))) return 'Server default page, no site installed';
+    if (text.length < 3000 && NOT_FOUND_TITLE_RE.test(title)) return 'Page not found';
     return null;
 }
 

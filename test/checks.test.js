@@ -51,6 +51,10 @@ test('placeholder, parked, suspended and server default pages', () => {
     assert.equal(brokenPageReason(nginx, nginx.html(), visibleText(nginx)), 'Server default page, no site installed');
     const real = page('<h1>Joe\'s Plumbing</h1><p>Emergency plumber in Manchester since 1998.</p>', '<title>Joe\'s Plumbing</title>');
     assert.equal(brokenPageReason(real, real.html(), visibleText(real)), null);
+    const soft404 = page('<p>Sorry, we could not find that booking.</p>', '<title>Page Not Found</title>');
+    assert.equal(brokenPageReason(soft404, soft404.html(), visibleText(soft404)), 'Page not found');
+    const found = page('<p>Found your style? Book now.</p>', '<title>Lost &amp; Found Barbers</title>');
+    assert.equal(brokenPageReason(found, found.html(), visibleText(found)), null);
 });
 
 test('booking: known provider link or widget, generic "book" labels in several languages', () => {

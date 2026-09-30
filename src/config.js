@@ -44,6 +44,8 @@ export const SCORING = {
     // Problems on a site that loads. These add up.
     noHttps: 20,
     brokenSsl: 20,
+    incompleteSslChain: 10, // browsers cope, but some browsers, apps and tools warn
+    listedLinkBroken: 15, // the listed link leads to a missing page; the homepage works
     noHttpsRedirect: 5,
     notMobileFriendly: 20,
     placeholderPage: 40, // "coming soon" / "under construction"

@@ -6,9 +6,16 @@
 // HTTP.hostGapMs apart, and bot walls (Cloudflare challenge, Vercel checkpoint, DataDome...)
 // reported as "blocked", never retried or worked around.
 import { log } from 'apify';
+import { Agent, fetch as undiciFetch } from 'undici';
 import { HTTP } from './config.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// A certificate chain missing its intermediate: browsers fetch the missing certificate and show
+// the site, Node refuses. `lenientTls` reads such a page anyway (public HTML only, nothing sent);
+// the audit still reports the certificate problem.
+const lenientTlsAgent = new Agent({ connect: { rejectUnauthorized: false } });
+export const isIncompleteChain = (code) => /UNABLE_TO_VERIFY_LEAF_SIGNATURE|UNABLE_TO_GET_ISSUER_CERT_LOCALLY/.test(String(code ?? ''));
 const hostTurns = new Map();
 
 function waitForHost(host) {
@@ -47,7 +54,7 @@ const isFinal = (code) => /ENOTFOUND|EAI_AGAIN|ECONNREFUSED|EHOSTUNREACH|ENETUNR
  * @returns {Promise<{ok: boolean, category: string, status: number, url: string, finalUrl?: string,
  *   headers?: Record<string,string>, body?: string, elapsedMs?: number, errorCode?: string}>}
  */
-export async function getPage(url, { timeoutMs = HTTP.timeoutMs, maxAttempts = HTTP.maxAttempts, accept = 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8' } = {}) {
+export async function getPage(url, { timeoutMs = HTTP.timeoutMs, maxAttempts = HTTP.maxAttempts, accept = 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8', lenientTls = false } = {}) {
     let host;
     try {
         host = new URL(url).host;
@@ -63,11 +70,12 @@ export async function getPage(url, { timeoutMs = HTTP.timeoutMs, maxAttempts = H
         const timer = setTimeout(() => controller.abort(), timeoutMs);
         const started = Date.now();
         try {
-            const res = await fetch(url, {
+            const init = {
                 headers: { 'User-Agent': HTTP.userAgent, Accept: accept, 'Accept-Language': 'en;q=0.8, *;q=0.5' },
                 redirect: 'follow',
                 signal: controller.signal,
-            });
+            };
+            const res = lenientTls ? await undiciFetch(url, { ...init, dispatcher: lenientTlsAgent }) : await fetch(url, init);
             const headers = Object.fromEntries([...res.headers.entries()].map(([k, v]) => [k.toLowerCase(), v]));
             const type = headers['content-type'] ?? '';
             const readable = !type || /html|text|xml|json/i.test(type);

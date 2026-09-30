@@ -23,7 +23,7 @@ Every business gets one **website status**:
 |---|---|
 | `none` | No website listed |
 | `social_only` | The "website" is a Facebook, Instagram, TikTok, WhatsApp, Linktree, Google or booking-app profile (Fresha, Booksy...) |
-| `broken` | Doesn't load, doesn't resolve, errors, or is parked / for sale / suspended |
+| `broken` | Doesn't load, doesn't resolve, errors, shows "page not found", or is parked / for sale / suspended |
 | `dead_builder` | Built on a site builder that has shut down (Google Business Profile websites, Adobe Muse, Business Catalyst, FrontPage, iWeb...) |
 | `free_subdomain` | Lives on a free address like `salon.wixsite.com` or `plumber.blogspot.com` |
 | `blocked` | The site refuses automated checks (bot protection or robots.txt). Reported, never worked around, and free. These rows get no score (`opportunityScore: null`) and a "Couldn't audit" note, so they never pass for healthy sites |
@@ -55,6 +55,8 @@ The score adds up points for every gap found, capped at 100:
 | Copyright 8+ years old (5-7 years: 20, 3-4 years: 10) | 40 |
 | No HTTPS / broken SSL certificate | 20 |
 | Not mobile friendly | 20 |
+| Listed website link leads to a missing page (the homepage works and is audited instead) | 15 |
+| Incomplete SSL certificate chain (browsers cope, some apps and browsers warn) | 10 |
 | Appointment business (salon, clinic, dentist...) with no online booking | 12 |
 | Homepage over 5 seconds (over 3 seconds: 7) | 12 |
 | Outdated WordPress (below 6.0) | 10 |
@@ -165,7 +167,7 @@ neither saved nor charged. See the Pricing tab for current prices.
 
 ## How it works
 
-- **One or two requests per site**: `robots.txt` (which also tells whether HTTPS works) and the homepage. Full depth adds the contact page. No headless browser, no proxies.
+- **Two requests per site**: `robots.txt` (which also tells whether HTTPS works) and the page itself. Full depth adds the contact page, and a dead listed link adds the homepage. No headless browser, no proxies.
 - **Polite**: an honest user agent, `robots.txt` respected, requests to the same site spaced at least a second apart, and businesses sharing one website audited once.
 - **Reliable**: timeouts, retries with backoff for temporary errors, and one bad site never stops the run. A summary is logged at the end.
 

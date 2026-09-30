@@ -30,7 +30,10 @@ export function scoreBusiness(business, audit, now = new Date()) {
     if (siteLoads) {
         if (status === 'free_subdomain') add('free_subdomain', statusPoints, `On a free ${audit.freeHost} address, no own domain`, `sits on a free ${audit.freeHost} address`);
         if (audit.placeholder) add('placeholder', SCORING.placeholderPage, 'Placeholder page (coming soon / under construction)', 'is still a placeholder page');
-        if (audit.sslError) add('brokenSsl', SCORING.brokenSsl, 'Broken SSL certificate', 'shows a security warning (broken SSL certificate)');
+        if (audit.listedLinkBroken) add('listedLinkBroken', SCORING.listedLinkBroken, 'Listed website link leads to a missing page', 'is listed with a link to a missing page');
+        if (audit.sslError === 'INCOMPLETE_CHAIN') {
+            add('incompleteSsl', SCORING.incompleteSslChain, 'Incomplete SSL certificate chain (warnings in some browsers and apps)', 'shows security warnings in some browsers and apps');
+        } else if (audit.sslError) add('brokenSsl', SCORING.brokenSsl, 'Broken SSL certificate', 'shows a security warning (broken SSL certificate)');
         else if (audit.https === false) add('noHttps', SCORING.noHttps, 'No HTTPS', "isn't secure (no HTTPS)");
         else if (audit.httpRedirectsToHttps === false) add('noHttpsRedirect', SCORING.noHttpsRedirect, "HTTP doesn't redirect to HTTPS", "doesn't redirect to HTTPS");
         if (audit.mobileFriendly === false) add('notMobileFriendly', SCORING.notMobileFriendly, 'Not mobile friendly', "isn't mobile friendly");
