@@ -16,6 +16,7 @@ export const EVENTS = {
 
 export const HTTP = {
     timeoutMs: 15_000,
+    slowRetryTimeoutMs: 45_000, // a page that timed out gets one retry with this much time (some sites take 30s+)
     robotsTimeoutMs: 8_000,
     maxAttempts: 3, // for 429s, 5xx and dropped connections; timeouts get one retry, DNS/TLS/refused none
     baseDelayMs: 1000, // backoff: 1s, 2s, 4s...

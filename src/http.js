@@ -54,7 +54,10 @@ const isFinal = (code) => /ENOTFOUND|EAI_AGAIN|ECONNREFUSED|EHOSTUNREACH|ENETUNR
  * @returns {Promise<{ok: boolean, category: string, status: number, url: string, finalUrl?: string,
  *   headers?: Record<string,string>, body?: string, elapsedMs?: number, errorCode?: string}>}
  */
-export async function getPage(url, { timeoutMs = HTTP.timeoutMs, maxAttempts = HTTP.maxAttempts, accept = 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8', lenientTls = false } = {}) {
+export async function getPage(url, {
+    timeoutMs = HTTP.timeoutMs, retryTimeoutMs = HTTP.slowRetryTimeoutMs, maxAttempts = HTTP.maxAttempts,
+    accept = 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8', lenientTls = false,
+} = {}) {
     let host;
     try {
         host = new URL(url).host;
@@ -67,7 +70,7 @@ export async function getPage(url, { timeoutMs = HTTP.timeoutMs, maxAttempts = H
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         await waitForHost(host);
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        const timer = setTimeout(() => controller.abort(), timeouts > 0 ? retryTimeoutMs : timeoutMs);
         const started = Date.now();
         try {
             const init = {

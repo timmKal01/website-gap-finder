@@ -58,7 +58,7 @@ const robotsCache = new Map();
 function robotsFor(host) {
     if (!robotsCache.has(host)) {
         robotsCache.set(host, (async () => {
-            const secure = await getPage(`https://${host}/robots.txt`, { timeoutMs: HTTP.robotsTimeoutMs, maxAttempts: 2, accept: 'text/plain,*/*;q=0.5' });
+            const secure = await getPage(`https://${host}/robots.txt`, { timeoutMs: HTTP.robotsTimeoutMs, retryTimeoutMs: HTTP.robotsTimeoutMs, maxAttempts: 2, accept: 'text/plain,*/*;q=0.5' });
             const httpsWorks = secure.category !== 'network_error'; // any HTTP answer means TLS was fine
             const tlsError = secure.category === 'network_error' && isTlsError(secure.errorCode) ? secure.errorCode : null;
             const dnsFailed = /ENOTFOUND|EAI_AGAIN/.test(secure.errorCode ?? '');
