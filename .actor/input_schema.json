@@ -7,6 +7,8 @@
             "title": "Dataset ID (e.g. from a Google Maps scraper)",
             "type": "string",
             "editor": "textfield",
+            "resourceType": "dataset",
+            "resourcePermissions": ["READ"],
             "sectionCaption": "Businesses to audit",
             "sectionDescription": "Use a dataset from another actor, a list of your own, or both. At least one is required.",
             "description": "ID of an Apify dataset produced by another actor, such as a Google Maps scraper run (open the run, then Storage > Dataset to copy the ID). Common field names are mapped automatically: title/name, website/url, phone, address, city, countryCode, categoryName, totalScore/rating, reviewsCount and the Google Maps url. Permanently closed places and duplicates are skipped."
