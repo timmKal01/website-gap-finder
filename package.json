@@ -1,0 +1,20 @@
+{
+    "name": "website-gap-finder",
+    "version": "0.1.0",
+    "type": "module",
+    "description": "Audit local businesses' websites (from a Google Maps scraper dataset or a list) and score each one as a lead for web agencies and freelancers.",
+    "engines": {
+        "node": ">=20.0.0"
+    },
+    "dependencies": {
+        "apify": "^3.2.6",
+        "cheerio": "^1.2.0",
+        "libphonenumber-js": "^1.13.14",
+        "tech-stack-signatures": "https://github.com/timmKal01/tech-stack-signatures/archive/refs/tags/v1.0.0.tar.gz",
+        "tldts": "^7.4.16"
+    },
+    "scripts": {
+        "start": "node src/main.js",
+        "test": "node --test"
+    }
+}

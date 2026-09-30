@@ -1,0 +1,11 @@
+{
+    "actorOutputSchemaVersion": 1,
+    "title": "Output schema of Website Gap Finder",
+    "properties": {
+        "results": {
+            "type": "string",
+            "title": "Audited businesses",
+            "template": "{{links.apiDefaultDatasetUrl}}/items"
+        }
+    }
+}

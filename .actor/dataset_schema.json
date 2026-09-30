@@ -1,0 +1,43 @@
+{
+    "actorSpecification": 1,
+    "fields": {},
+    "views": {
+        "overview": {
+            "title": "Overview",
+            "transformation": {
+                "fields": ["name", "city", "websiteStatus", "opportunityScore", "opportunityReasons"]
+            },
+            "display": {
+                "component": "table",
+                "properties": {
+                    "name": { "label": "Business", "format": "text" },
+                    "city": { "label": "City", "format": "text" },
+                    "websiteStatus": { "label": "Website status", "format": "text" },
+                    "opportunityScore": { "label": "Score", "format": "number" },
+                    "opportunityReasons": { "label": "Reasons", "format": "array" }
+                }
+            }
+        },
+        "outreach": {
+            "title": "Outreach",
+            "transformation": {
+                "fields": ["name", "category", "city", "opportunityScore", "pitchAngle", "phone", "publicEmail", "whatsapp", "websiteUrl", "mapsUrl"]
+            },
+            "display": {
+                "component": "table",
+                "properties": {
+                    "name": { "label": "Business", "format": "text" },
+                    "category": { "label": "Category", "format": "text" },
+                    "city": { "label": "City", "format": "text" },
+                    "opportunityScore": { "label": "Score", "format": "number" },
+                    "pitchAngle": { "label": "Pitch angle", "format": "text" },
+                    "phone": { "label": "Phone", "format": "text" },
+                    "publicEmail": { "label": "Email", "format": "text" },
+                    "whatsapp": { "label": "WhatsApp", "format": "text" },
+                    "websiteUrl": { "label": "Website", "format": "link" },
+                    "mapsUrl": { "label": "Google Maps", "format": "link" }
+                }
+            }
+        }
+    }
+}

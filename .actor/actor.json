@@ -1,0 +1,19 @@
+{
+    "actorSpecification": 1,
+    "name": "website-gap-finder",
+    "title": "Website Gap Finder: Local Business Leads + Website Audit",
+    "description": "Find local business leads for web agencies and freelancers with a website audit of every business in a Google Maps scraper dataset or your own list. Flags no website, broken or outdated sites, no HTTPS, no mobile layout and no online booking, then scores each lead 0-100 with a ready pitch line. Works in any country.",
+    "version": "0.1",
+    "meta": {
+        "templateId": "custom-no-proxy"
+    },
+    "input": "./input_schema.json",
+    "output": "./output_schema.json",
+    "dockerfile": "../Dockerfile",
+    "storages": {
+        "dataset": "./dataset_schema.json"
+    },
+    "defaultMemoryMbytes": 512,
+    "minMemoryMbytes": 256,
+    "maxMemoryMbytes": 1024
+}

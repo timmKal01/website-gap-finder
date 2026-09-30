@@ -1,0 +1,17 @@
+{
+    "website-audited": {
+        "eventTitle": "Website audited",
+        "eventDescription": "One business whose website was fetched and audited, including sites found broken. Sites that block automated checks are free.",
+        "eventPriceUsd": 0
+    },
+    "lead-no-website": {
+        "eventTitle": "Lead without a website",
+        "eventDescription": "One business with no website of its own (none, only a social or listing page, or a shut-down site builder). Scored without fetching anything.",
+        "eventPriceUsd": 0
+    },
+    "contacts-extracted": {
+        "eventTitle": "Contact details extracted",
+        "eventDescription": "A public business email, phone number or WhatsApp link found on the site. Only when contact extraction is on and something was found.",
+        "eventPriceUsd": 0
+    }
+}

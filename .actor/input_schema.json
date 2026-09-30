@@ -1,0 +1,71 @@
+{
+    "title": "Website Gap Finder input",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        "datasetId": {
+            "title": "Dataset ID (e.g. from a Google Maps scraper)",
+            "type": "string",
+            "editor": "textfield",
+            "sectionCaption": "Businesses to audit",
+            "sectionDescription": "Use a dataset from another actor, a list of your own, or both. At least one is required.",
+            "description": "ID of an Apify dataset produced by another actor, such as a Google Maps scraper run (open the run, then Storage > Dataset to copy the ID). Common field names are mapped automatically: title/name, website/url, phone, address, city, countryCode, categoryName, totalScore/rating, reviewsCount and the Google Maps url. Permanently closed places and duplicates are skipped."
+        },
+        "businesses": {
+            "title": "Businesses",
+            "type": "array",
+            "editor": "json",
+            "description": "Your own list of businesses. Each item needs a name and, if it has one, a website. Optional: phone, address, city, country (name or 2-letter code, used to format phone numbers internationally) and category (e.g. \"Hair salon\", used to spot missing online booking).",
+            "prefill": [
+                { "name": "Corner Barbershop (example: no website)", "category": "Barber shop", "city": "Austin", "country": "US", "phone": "(512) 555-0142" },
+                { "name": "Sunrise Nails (example: Instagram only)", "website": "https://www.instagram.com/example", "category": "Nail salon", "city": "Nairobi", "country": "KE" },
+                { "name": "Example Plumbing Ltd", "website": "https://example.com", "category": "Plumber", "city": "Manchester", "country": "GB" }
+            ]
+        },
+        "auditDepth": {
+            "title": "Audit depth",
+            "type": "string",
+            "editor": "select",
+            "enum": ["basic", "full"],
+            "enumTitles": ["Basic: homepage only (fastest)", "Full: homepage + contact page if linked"],
+            "default": "basic",
+            "sectionCaption": "Audit options",
+            "description": "Basic checks each homepage. Full also opens the contact page when the homepage links to one, which finds more contact details and booking links for one extra request per site."
+        },
+        "extractContacts": {
+            "title": "Extract public business contacts",
+            "type": "boolean",
+            "editor": "checkbox",
+            "default": false,
+            "description": "Pull the business email, phone number and WhatsApp link the site publishes. Only generic business mailboxes (info@, contact@, bookings@...) or addresses carrying the business name are kept; named staff members' personal addresses are skipped. Charged per business where something was found."
+        },
+        "onlyOpportunities": {
+            "title": "Only output opportunities",
+            "type": "boolean",
+            "editor": "checkbox",
+            "default": false,
+            "sectionCaption": "Filtering",
+            "description": "Skip businesses whose opportunity score is below the minimum. Skipped businesses aren't saved and aren't charged."
+        },
+        "minScore": {
+            "title": "Minimum opportunity score",
+            "type": "integer",
+            "editor": "number",
+            "default": 50,
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Used with \"Only output opportunities\". 0-100, higher means a bigger website gap: no website scores 80+, a working site with a few problems around 30-60."
+        },
+        "maxConcurrency": {
+            "title": "Max concurrency",
+            "type": "integer",
+            "editor": "number",
+            "default": 10,
+            "minimum": 1,
+            "maximum": 50,
+            "sectionCaption": "Performance",
+            "description": "How many businesses are audited at the same time. Requests to the same website are always spaced at least a second apart."
+        }
+    },
+    "required": []
+}
