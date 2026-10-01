@@ -155,15 +155,32 @@ rather than new builds.
 
 ## Pricing
 
-Pay per event, and only for rows you receive:
+Pay per event, only for the rows you receive. Compute and traffic are included.
 
-- **Start**: Apify's small standard fee per run.
-- **Website audited**: per business whose website was fetched and audited, including sites found broken.
-- **Lead without a website**: per business with no site to fetch (none, only a social page, or a dead builder's domain). Cheaper, since nothing is fetched.
-- **Contacts extracted**: only when `extractContacts` is on and an email, phone or WhatsApp link was found.
+| Event | Price | Charged |
+|---|---|---|
+| Website audited | $0.003 | Per business whose website was fetched and audited, including sites found broken |
+| Lead without a website | $0.001 | Per business with nothing to fetch: no website, only a social or listing page, or a shut-down site builder |
+| Contacts extracted | $0.001 | Per business, only when `extractContacts` is on and a business email, phone or WhatsApp link was found |
+| Actor start | $0.00005 | Apify's standard fee, once per run (one per GB of memory; the default 512 MB counts as one) |
 
-Sites that block automated checks are free, and businesses skipped by `onlyOpportunities` are
-neither saved nor charged. See the Pricing tab for current prices.
+**Free:** sites that block automated checks (saved with no score and a "Couldn't audit" note), and
+businesses left out by `onlyOpportunities`, which are neither saved nor charged.
+
+**Worked example: 1,000 businesses from a Google Maps scrape**, with `extractContacts` on. Say 600
+of them list a website, 400 have none or only a Facebook or Instagram page, and 300 of the sites
+show a business email, phone or WhatsApp link:
+
+| | Businesses | Price | Cost |
+|---|---|---|---|
+| Websites audited | 600 | $0.003 | $1.80 |
+| Leads without a website | 400 | $0.001 | $0.40 |
+| Contacts extracted | 300 | $0.001 | $0.30 |
+| Run start | 1 | $0.00005 | $0.00005 |
+| **Total** | | | **$2.50** |
+
+Any 1,000-business run costs between $1 (no business has a website) and $4 (every one has a site
+and contact details). With `onlyOpportunities` on, you pay only for the leads that reach `minScore`.
 
 ## How it works
 
