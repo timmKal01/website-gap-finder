@@ -1,6 +1,6 @@
 {
     "website-audited": {
-        "eventTitle": "Website audited",
+        "eventTitle": "Audited website",
         "eventDescription": "One business whose website was fetched and audited, including sites found broken. Sites that block automated checks are free.",
         "eventPriceUsd": 0.003
     },

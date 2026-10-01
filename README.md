@@ -159,7 +159,7 @@ Pay per event, only for the rows you receive. Compute and traffic are included.
 
 | Event | Price | Charged |
 |---|---|---|
-| Website audited | $0.003 | Per business whose website was fetched and audited, including sites found broken |
+| Audited website | $0.003 | Per business whose website was fetched and audited, including sites found broken |
 | Lead without a website | $0.001 | Per business with nothing to fetch: no website, only a social or listing page, or a shut-down site builder |
 | Contacts extracted | $0.001 | Per business, only when `extractContacts` is on and a business email, phone or WhatsApp link was found |
 | Actor start | $0.00005 | Apify's standard fee, once per run (one per GB of memory; the default 512 MB counts as one) |
@@ -173,7 +173,7 @@ show a business email, phone or WhatsApp link:
 
 | | Businesses | Price | Cost |
 |---|---|---|---|
-| Websites audited | 600 | $0.003 | $1.80 |
+| Audited websites | 600 | $0.003 | $1.80 |
 | Leads without a website | 400 | $0.001 | $0.40 |
 | Contacts extracted | 300 | $0.001 | $0.30 |
 | Run start | 1 | $0.00005 | $0.00005 |
