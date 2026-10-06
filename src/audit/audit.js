@@ -7,7 +7,7 @@
 import * as cheerio from 'cheerio';
 import { detectTechStack } from 'tech-stack-signatures';
 import { HTTP } from '../config.js';
-import { getPage, isTlsError, isIncompleteChain } from '../http.js';
+import { getPage, isTlsError, readableTlsIssue } from '../http.js';
 import { parseRobots, isAllowed } from '../robots.js';
 import { profilePlatform, freeHostSuffix, deadBuilderFromHost, deadBuilderFromGenerator, isDomainMarketplace, domainCarriesName } from './classify.js';
 import {
@@ -109,7 +109,7 @@ export async function auditWebsite(business, { auditDepth, extractContacts, coun
     if (robots.blocked) return { ...result, websiteStatus: 'blocked', websiteError: 'site blocks automated checks (bot protection)' };
     if (!isAllowed(robots.rules, target.pathname)) return { ...result, websiteStatus: 'blocked', websiteError: 'robots.txt disallows automated checks' };
     result.https = robots.httpsWorks;
-    result.sslError = isIncompleteChain(robots.tlsError) ? 'INCOMPLETE_CHAIN' : robots.tlsError;
+    result.sslError = readableTlsIssue(robots.tlsError) ?? robots.tlsError;
 
     // 2. The page over plain HTTP, to see whether it's sent on to HTTPS.
     const httpsUrl = `https://${target.host}${pathAndQuery}`;
@@ -122,22 +122,25 @@ export async function auditWebsite(business, { auditDepth, extractContacts, coun
         // HTTPS still get the site, so that's the one to audit.
         page = await getPage(httpsUrl);
     }
-    // Incomplete certificate chain: read the page anyway (see http.js) and report the certificate.
-    if (!page.ok && page.category === 'network_error' && [robots.tlsError, page.errorCode].some(isIncompleteChain)) {
+    // A certificate problem browsers may get past (see readableTlsIssue): read the page anyway and
+    // report the certificate as a finding.
+    const tlsIssue = readableTlsIssue(robots.tlsError) ?? readableTlsIssue(page.errorCode);
+    if (!page.ok && page.category === 'network_error' && tlsIssue) {
         const lenient = await getPage(httpsUrl, { lenientTls: true });
         if (lenient.category !== 'network_error') {
             page = lenient;
             result.https = true;
-            result.sslError = 'INCOMPLETE_CHAIN';
+            result.sslError = tlsIssue;
         }
     }
+    const lenientTls = result.sslError === 'INCOMPLETE_CHAIN' || result.sslError === 'UNVERIFIED_ISSUER';
 
     // The listed link is a page that's gone, on what looks like the business's own domain: audit
     // the homepage instead, and count the dead link as a gap of its own. (On a platform's domain,
     // such as a booking site, the homepage isn't the business's, so the link stays broken.)
     const homepageInstead = async (why) => {
         if (target.pathname === '/' || !domainCarriesName(business.name, url) || !isAllowed(robots.rules, '/')) return null;
-        const home = await getPage(`${result.https ? 'https' : 'http'}://${target.host}/`, { lenientTls: result.sslError === 'INCOMPLETE_CHAIN' });
+        const home = await getPage(`${result.https ? 'https' : 'http'}://${target.host}/`, { lenientTls });
         if (!home.ok) return null;
         result.listedLinkBroken = true;
         result.websiteError = `listed page not found (${why}), homepage audited instead`;
@@ -150,7 +153,10 @@ export async function auditWebsite(business, { auditDepth, extractContacts, coun
             const why = page.errorCode === 'BOT_PROTECTION' ? 'bot protection' : `HTTP ${page.status}`;
             return { ...result, websiteStatus: 'blocked', websiteError: `site blocks automated checks (${why})` };
         }
-        return { ...result, websiteStatus: 'broken', websiteError: describeFailure(page), finalUrl: page.finalUrl ?? null };
+        // HTTPS already failed on its certificate: that's the cause to report, not the HTTP fallback's error.
+        const cause = page.category === 'network_error' && robots.tlsError && !isTlsError(page.errorCode)
+            ? `SSL error (${robots.tlsError})` : describeFailure(page);
+        return { ...result, websiteStatus: 'broken', websiteError: cause, finalUrl: page.finalUrl ?? null };
     }
 
     result.finalUrl = page.finalUrl;

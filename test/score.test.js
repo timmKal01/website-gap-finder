@@ -70,3 +70,11 @@ test('score is capped at 100; blocked sites get no score, only an explanation', 
     assert.deepEqual(blocked.opportunityReasons, ["Couldn't audit: site blocks automated checks (bot protection)"]);
     assert.equal(blocked.pitchAngle, "Couldn't audit: site blocks automated checks (bot protection). Check Austin Family Dentistry's website by hand before reaching out.");
 });
+
+test('certificate findings: incomplete chain is mild, an unverifiable issuer counts like a broken certificate', () => {
+    const chain = scoreBusiness({ name: 'A', category: 'Plumber' }, { ...base, sslError: 'INCOMPLETE_CHAIN' }, NOW);
+    assert.equal(chain.opportunityScore, 10);
+    const issuer = scoreBusiness({ name: 'B', category: 'Plumber' }, { ...base, sslError: 'UNVERIFIED_ISSUER' }, NOW);
+    assert.equal(issuer.opportunityScore, 20);
+    assert.match(issuer.opportunityReasons[0], /issuer can't be verified/);
+});

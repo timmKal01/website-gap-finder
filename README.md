@@ -53,7 +53,7 @@ The score adds up points for every gap found, capped at 100:
 | On a free subdomain (e.g. `salon.wixsite.com`) | 50 |
 | Placeholder page ("coming soon") | 40 |
 | Copyright 8+ years old (5-7 years: 20, 3-4 years: 10) | 40 |
-| No HTTPS / broken SSL certificate | 20 |
+| No HTTPS / broken or unverifiable SSL certificate | 20 |
 | Not mobile friendly | 20 |
 | Listed website link leads to a missing page (the homepage works and is audited instead) | 15 |
 | Incomplete SSL certificate chain (browsers cope, some apps and browsers warn) | 10 |

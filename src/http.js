@@ -15,7 +15,19 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // the site, Node refuses. `lenientTls` reads such a page anyway (public HTML only, nothing sent);
 // the audit still reports the certificate problem.
 const lenientTlsAgent = new Agent({ connect: { rejectUnauthorized: false } });
-export const isIncompleteChain = (code) => /UNABLE_TO_VERIFY_LEAF_SIGNATURE|UNABLE_TO_GET_ISSUER_CERT_LOCALLY/.test(String(code ?? ''));
+
+/**
+ * TLS errors where the page is still worth reading, as a certificate finding rather than "site down":
+ * - INCOMPLETE_CHAIN: the server sent only its own certificate. Browsers fetch the missing one.
+ * - UNVERIFIED_ISSUER: a certificate's issuer isn't known here. Either a private CA (browsers warn)
+ *   or a root newer than Node's list (browsers are fine), so it's scored as a certificate problem.
+ * Expired, self-signed and wrong-host certificates return null: browsers block those outright.
+ */
+export function readableTlsIssue(code) {
+    if (/UNABLE_TO_VERIFY_LEAF_SIGNATURE/.test(String(code ?? ''))) return 'INCOMPLETE_CHAIN';
+    if (/UNABLE_TO_GET_ISSUER_CERT_LOCALLY/.test(String(code ?? ''))) return 'UNVERIFIED_ISSUER';
+    return null;
+}
 const hostTurns = new Map();
 
 function waitForHost(host) {

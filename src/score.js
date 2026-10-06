@@ -33,6 +33,8 @@ export function scoreBusiness(business, audit, now = new Date()) {
         if (audit.listedLinkBroken) add('listedLinkBroken', SCORING.listedLinkBroken, 'Listed website link leads to a missing page', 'is listed with a link to a missing page');
         if (audit.sslError === 'INCOMPLETE_CHAIN') {
             add('incompleteSsl', SCORING.incompleteSslChain, 'Incomplete SSL certificate chain (warnings in some browsers and apps)', 'shows security warnings in some browsers and apps');
+        } else if (audit.sslError === 'UNVERIFIED_ISSUER') {
+            add('brokenSsl', SCORING.brokenSsl, "SSL certificate issuer can't be verified (browsers may warn)", "may show a security warning (its certificate can't be verified)");
         } else if (audit.sslError) add('brokenSsl', SCORING.brokenSsl, 'Broken SSL certificate', 'shows a security warning (broken SSL certificate)');
         else if (audit.https === false) add('noHttps', SCORING.noHttps, 'No HTTPS', "isn't secure (no HTTPS)");
         else if (audit.httpRedirectsToHttps === false) add('noHttpsRedirect', SCORING.noHttpsRedirect, "HTTP doesn't redirect to HTTPS", "doesn't redirect to HTTPS");
