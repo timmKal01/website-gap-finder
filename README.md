@@ -1,13 +1,20 @@
-# Website Gap Finder: Google Maps Leads + Website Audit
+# Website Gap Finder: Businesses Without Websites + Audit
 
-Find local business leads that need a new or better website. Feed it the results of a **Google Maps**
-scraper (or your own list), and it runs a quick **website audit** on every business: no website at
-all, only a Facebook or Instagram page, a broken or parked domain, no HTTPS, not mobile friendly,
-an outdated site, no online booking. Each business gets an **opportunity score** from 0 to 100,
-the reasons behind it, and a one-line pitch you can open your outreach with.
+Find **businesses without websites**, or with websites bad enough to sell them a new one. Feed it
+the results of a **Google Maps** scraper (or your own list), and it runs a quick **website audit** on
+every business: no website at all, only a Facebook or Instagram page, a broken or parked domain,
+no HTTPS, not mobile friendly, an outdated site, no online booking. Each business gets an
+**opportunity score** from 0 to 100, the reasons behind it, and a one-line pitch you can open your
+outreach with.
+
+Every listed website is actually opened, so a business whose domain has expired, is parked or no
+longer loads counts as a lead too, not as a business that "has a website".
 
 It works for businesses in any country: phone numbers come back in international format, and the
 checks read pages in any language.
+
+Already scraped Google Maps? Paste the run's dataset ID into `datasetId` and you're done (see
+[Chain it after a Google Maps scraper](#chain-it-after-a-google-maps-scraper) below).
 
 ## Who it's for
 

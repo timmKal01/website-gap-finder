@@ -1,8 +1,8 @@
 {
     "actorSpecification": 1,
     "name": "website-gap-finder",
-    "title": "Website Gap Finder: Local Business Leads + Website Audit",
-    "description": "Find local business leads for web agencies with a website audit of every business in a Google Maps scraper dataset or your own list: no website, broken or outdated sites, no HTTPS, no mobile layout, no online booking. Scores each lead 0-100 with a pitch line. Any country.",
+    "title": "Website Gap Finder: Businesses Without Websites + Audit",
+    "description": "Find businesses without websites, or with broken, outdated or insecure ones, in your Google Maps scraper results or your own list. Every business gets a website audit and a 0-100 lead score with a pitch line, for web design agencies and freelancers. Any country.",
     "version": "0.1",
     "meta": {
         "templateId": "custom-no-proxy"
