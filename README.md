@@ -18,7 +18,7 @@ Already scraped Google Maps? Paste the run's dataset ID into `datasetId` and you
 
 ## Who it's for
 
-- **Web design agencies and freelancers** looking for local clients who clearly need a site.
+- **Web design agencies and freelancers** looking for web design leads: local businesses that clearly need a new site.
 - **SEO and marketing consultants** who sell website fixes, speed and booking setups.
 - **Lead generation sellers** who want to hand clients a scored list, not a raw directory dump.
 
