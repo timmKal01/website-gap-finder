@@ -1,79 +1,87 @@
 # Website Gap Finder: Businesses Without Websites + Audit
 
-Find **businesses without websites**, or with websites bad enough to sell them a new one. Feed it
-the results of a **Google Maps** scraper (or your own list), and it runs a quick **website audit** on
-every business: no website at all, only a Facebook or Instagram page, a broken or parked domain,
-no HTTPS, not mobile friendly, an outdated site, no online booking. Each business gets an
-**opportunity score** from 0 to 100, the reasons behind it, and a one-line pitch you can open your
-outreach with.
+For web design agencies, freelancers and lead sellers: give it the businesses from a Google Maps scrape (or your own list) and get back which ones have no website, a broken one or an outdated one, each scored 0 to 100 with a one-line pitch to open your outreach with.
 
-Every listed website is actually opened, so a business whose domain has expired, is parked or no
-longer loads counts as a lead too, not as a business that "has a website".
+## What you get
 
-It works for businesses in any country: phone numbers come back in international format, and the
-checks read pages in any language.
+- `websiteStatus` for every business: `none`, `social_only` (only a Facebook or Instagram page), `broken`, `dead_builder`, `free_subdomain`, `blocked` or `ok`
+- `opportunityScore` (0 to 100), the `opportunityReasons` behind it, and a ready `pitchAngle` sentence
+- For sites that load: HTTPS, mobile layout, load time, the last copyright year, tech stack (WordPress, Wix, Shopify and more) and online booking, with the provider's name
+- With `extractContacts` on: the public business email, phone and WhatsApp link from the site
 
-Already scraped Google Maps? Paste the run's dataset ID into `datasetId` and you're done (see
-[Chain it after a Google Maps scraper](#chain-it-after-a-google-maps-scraper) below).
+Every listed website is actually opened, so a business whose domain has expired, is parked or no longer loads counts as a lead, not as a business that "has a website".
 
-## Who it's for
+## Example output
 
-- **Web design agencies and freelancers** looking for web design leads: local businesses that clearly need a new site.
-- **SEO and marketing consultants** who sell website fixes, speed and booking setups.
-- **Lead generation sellers** who want to hand clients a scored list, not a raw directory dump.
+Real output from a run on Apify on 2026-10-19, checking 5 beauty salons in Nairobi. The business's name, website and phone number are hidden here; every other field is exactly what the run returned.
 
-## What it checks
+```json
+{
+  "name": "(beauty salon in Nairobi, name hidden)",
+  "category": "Beauty salon",
+  "city": "Nairobi",
+  "country": "KE",
+  "phone": "+2547XXXXXXXX",
+  "phoneSource": "website",
+  "websiteUrl": "https://(hidden).com/beauty-salon",
+  "websiteStatus": "ok",
+  "websiteError": "listed page not found (HTTP 404), homepage audited instead",
+  "https": true,
+  "httpRedirectsToHttps": true,
+  "mobileFriendly": true,
+  "responseMs": 24,
+  "lastCopyrightYear": 2018,
+  "hasBooking": false,
+  "opportunityScore": 67,
+  "opportunityReasons": [
+    "Copyright still says 2018",
+    "Listed website link leads to a missing page",
+    "No online booking"
+  ],
+  "pitchAngle": "(Salon)'s website still says © 2018 and is listed with a link to a missing page; a refresh could bring in more customers.",
+  "auditedAt": "2026-10-19T04:01:31.890Z"
+}
+```
 
-Every business gets one **website status**:
+The other 4 salons in that run:
 
-| Status | Meaning |
-|---|---|
-| `none` | No website listed |
-| `social_only` | The "website" is a Facebook, Instagram, TikTok, WhatsApp, Linktree, Google or booking-app profile (Fresha, Booksy...) |
-| `broken` | Doesn't load, doesn't resolve, errors, shows "page not found", or is parked / for sale / suspended |
-| `dead_builder` | Built on a site builder that has shut down (Google Business Profile websites, Adobe Muse, Business Catalyst, FrontPage, iWeb...) |
-| `free_subdomain` | Lives on a free address like `salon.wixsite.com` or `plumber.blogspot.com` |
-| `blocked` | The site refuses automated checks (bot protection or robots.txt). Reported, never worked around, and free. These rows get no score (`opportunityScore: null`) and a "Couldn't audit" note, so they never pass for healthy sites |
-| `ok` | The site loads |
+| Status | Score | Main reason |
+|---|---|---|
+| `none` | 80 | No website |
+| `social_only` | 75 | Only a Facebook page, no website |
+| `broken` | 70 | Website not working: domain doesn't resolve |
+| `ok` | 0 | Site in good shape, little to pitch |
 
-For sites that load, it also checks:
+## What it costs
 
-- **HTTPS**, and whether `http://` redirects to `https://` (plus broken SSL certificates)
-- **Mobile friendly**: a responsive viewport tag
-- **Speed**: how long the homepage takes to load
-- **Last copyright year** in the footer (works across languages: ©, (c), "Copyright")
-- **Missing title or meta description**
-- **Tech stack**: WordPress (and outdated WordPress versions), Wix, Squarespace, Webflow, Shopify and more
-- **Online booking**, and which provider: Fresha, Booksy, Calendly, Square, Vagaro, SimplyBook.me, Setmore, Acuity, Mindbody, Treatwell, Zocdoc, OpenTable and 30+ others, plus "Book now" style links in many languages
-- **Social links**: Facebook, Instagram, TikTok, X, LinkedIn, YouTube, Pinterest
-- **Public business contacts** (optional): business email, phone and WhatsApp link
+Pay per event, only for the rows you receive. Compute and traffic are included.
 
-## How the score works
+| Event | Price | Charged |
+|---|---|---|
+| Audited website | $0.003 | Per business whose website was fetched and audited, including sites found broken |
+| Lead without a website | $0.001 | Per business with nothing to fetch: no website, only a social or listing page, or a shut-down site builder |
+| Contacts extracted | $0.001 | Per business, only when `extractContacts` is on and a business email, phone or WhatsApp link was found |
+| Actor start | $0.00005 | Apify's standard fee, once per run (one per GB of memory; the default 512 MB counts as one) |
 
-The score adds up points for every gap found, capped at 100:
+**Worked example: 1,000 businesses from a Google Maps scrape**, with `extractContacts` on. Say 600 of them list a website, 400 have none or only a Facebook or Instagram page, and 300 of the sites show a business email, phone or WhatsApp link:
 
-| Signal | Points |
-|---|---|
-| No website | 80 |
-| Only a social or listing page | 75 |
-| Broken site, or built on a dead builder | 70 |
-| On a free subdomain (e.g. `salon.wixsite.com`) | 50 |
-| Placeholder page ("coming soon") | 40 |
-| Copyright 8+ years old (5-7 years: 20, 3-4 years: 10) | 40 |
-| No HTTPS / broken or unverifiable SSL certificate | 20 |
-| Not mobile friendly | 20 |
-| Listed website link leads to a missing page (the homepage works and is audited instead) | 15 |
-| Incomplete SSL certificate chain (browsers cope, some apps and browsers warn) | 10 |
-| Appointment business (salon, clinic, dentist...) with no online booking | 12 |
-| Homepage over 5 seconds (over 3 seconds: 7) | 12 |
-| Outdated WordPress (below 6.0) | 10 |
-| Established business: 20+ reviews rated 4.0+ (more likely to pay) | 10 |
-| HTTP doesn't redirect to HTTPS | 5 |
-| No page title / no meta description | 5 each |
+| | Businesses | Price | Cost |
+|---|---|---|---|
+| Audited websites | 600 | $0.003 | $1.80 |
+| Leads without a website | 400 | $0.001 | $0.40 |
+| Contacts extracted | 300 | $0.001 | $0.30 |
+| Run start | 1 | $0.00005 | $0.00005 |
+| **Total** | | | **$2.50** |
 
-Roughly: **70+** means no working website or a badly outdated one, **40-70** a site with clear
-problems (a Wix subdomain with no booking lands around 60, a footer stuck on 2012 around 40),
-**under 20** a site in decent shape. Sites that couldn't be audited have no score.
+Any 1,000-business run costs between $1 (no business has a website) and $4 (every one has a site and contact details).
+
+**Free:** sites that block automated checks (saved with no score and a "Couldn't audit" note), and businesses left out by `onlyOpportunities`, which are neither saved nor charged.
+
+## Use cases
+
+- **Web designers:** scrape "hair salon" in your city, keep everything scoring 50 or more, and work down the list starting with businesses that have no site at all.
+- **SEO and marketing consultants:** find businesses whose sites lack HTTPS, a mobile layout or online booking, and pitch the fix.
+- **Lead sellers:** hand clients a scored list with a reason and a pitch line on every row, not a raw directory dump.
 
 ## Input
 
@@ -99,115 +107,61 @@ Give `datasetId`, `businesses`, or both.
 }
 ```
 
-## Chain it after a Google Maps scraper
+### Chain it after a Google Maps scraper
 
-1. Run a Google Maps scraper on Apify (for example **Google Maps Scraper** by compass) with your search, e.g. "hair salon" in "Nairobi". Include the place details that carry the website and phone.
+1. Run a Google Maps scraper on Apify (for example **Google Maps Scraper** by compass) with your search, for example "hair salon" in "Nairobi". Include the place details that carry the website and phone.
 2. When it finishes, open the run's **Storage** tab and copy the **dataset ID**.
 3. Start Website Gap Finder with that ID in `datasetId`.
 
 To make it automatic, add an integration to the Google Maps scraper task: **Run Actor** (Website Gap Finder) when the run succeeds, with the input `{ "datasetId": "{{resource.defaultDatasetId}}" }`.
 
-## Output
+## Related tools
 
-One row per business:
-
-```json
-{
-  "name": "Example Plumbing Ltd",
-  "category": "Plumber",
-  "address": "12 Example Street, Manchester",
-  "city": "Manchester",
-  "country": "GB",
-  "phone": "+441614960000",
-  "mapsUrl": "https://www.google.com/maps/place/...",
-  "rating": 4.6,
-  "reviewCount": 48,
-  "websiteUrl": "http://www.example.com/",
-  "websiteStatus": "ok",
-  "https": false,
-  "mobileFriendly": false,
-  "responseMs": 3400,
-  "techStack": ["WordPress", "jQuery"],
-  "lastCopyrightYear": 2017,
-  "hasBooking": false,
-  "bookingProvider": null,
-  "publicEmail": "info@example.com",
-  "socialLinks": { "facebook": "https://www.facebook.com/exampleplumbing" },
-  "opportunityScore": 97,
-  "opportunityReasons": ["Copyright still says 2017", "No HTTPS", "Not mobile friendly", "Established business (48 reviews, rated 4.6)", "Slow homepage (3.4s)"],
-  "pitchAngle": "Example Plumbing Ltd's website still says © 2017 and isn't secure (no HTTPS); a refresh could bring in more customers.",
-  "auditedAt": "2026-10-01T09:00:00.000Z"
-}
-```
-
-Also included: `placeId` (from the source dataset, to join rows back), `websiteError` (why a site counts as broken), `httpRedirectsToHttps`, `missingTitle`,
-`missingMetaDescription`, `whatsapp`, and `phoneSource` (`input` or `website`). The **Outreach**
-view in the Output tab shows name, score, status, pitch, phone, email, WhatsApp and links side by
-side; sites that couldn't be audited show an empty score and a pitch starting "Couldn't audit".
-
-## Example use cases
-
-**Salons in Nairobi.** Scrape "beauty salon" and "barber shop" in Nairobi, then run with
-`extractContacts` on. Salons that run on an Instagram or Facebook page alone show up as
-`social_only`, and WhatsApp numbers come back in `+254` format, ready to message.
-
-**Plumbers in Manchester, UK.** Scrape "plumber" in Manchester and filter with `onlyOpportunities`
-and `minScore: 40`. Look for old copyright years, missing HTTPS and slow homepages, and for
-domains that have lapsed or been parked: those businesses are losing calls right now.
-
-**Dentists in Austin, TX.** Scrape "dentist" in Austin and use `auditDepth: "full"`. For practices
-that already have a site, the gaps are finer: no online booking (the actor recognizes Zocdoc,
-NexHealth, LocalMed and others), slow pages and missing meta tags. A good fit for upsell pitches
-rather than new builds.
-
-## Pricing
-
-Pay per event, only for the rows you receive. Compute and traffic are included.
-
-| Event | Price | Charged |
-|---|---|---|
-| Audited website | $0.003 | Per business whose website was fetched and audited, including sites found broken |
-| Lead without a website | $0.001 | Per business with nothing to fetch: no website, only a social or listing page, or a shut-down site builder |
-| Contacts extracted | $0.001 | Per business, only when `extractContacts` is on and a business email, phone or WhatsApp link was found |
-| Actor start | $0.00005 | Apify's standard fee, once per run (one per GB of memory; the default 512 MB counts as one) |
-
-**Free:** sites that block automated checks (saved with no score and a "Couldn't audit" note), and
-businesses left out by `onlyOpportunities`, which are neither saved nor charged.
-
-**Worked example: 1,000 businesses from a Google Maps scrape**, with `extractContacts` on. Say 600
-of them list a website, 400 have none or only a Facebook or Instagram page, and 300 of the sites
-show a business email, phone or WhatsApp link:
-
-| | Businesses | Price | Cost |
-|---|---|---|---|
-| Audited websites | 600 | $0.003 | $1.80 |
-| Leads without a website | 400 | $0.001 | $0.40 |
-| Contacts extracted | 300 | $0.001 | $0.30 |
-| Run start | 1 | $0.00005 | $0.00005 |
-| **Total** | | | **$2.50** |
-
-Any 1,000-business run costs between $1 (no business has a website) and $4 (every one has a site
-and contact details). With `onlyOpportunities` on, you pay only for the leads that reach `minScore`.
-
-## How it works
-
-- **Two requests per site**: `robots.txt` (which also tells whether HTTPS works) and the page itself. Full depth adds the contact page, and a dead listed link adds the homepage. No headless browser, no proxies.
-- **Polite**: an honest user agent, `robots.txt` respected, requests to the same site spaced at least a second apart, and businesses sharing one website audited once.
-- **Reliable**: timeouts, retries with backoff for temporary errors, and one bad site never stops the run. A summary is logged at the end.
-
-**Limitations**: content drawn entirely by JavaScript can hide booking widgets and copyright
-years (shown as unknown, never guessed). Load time is measured from Apify's servers, not from the
-business's country.
-
-## Data and outreach compliance
-
-The output is business information the companies publish themselves: their website, business phone
-and generic business email. Personal-looking addresses of named staff are skipped on purpose. You
-are responsible for how you use it: follow GDPR, PECR in the UK, CAN-SPAM in the US, Kenya's Data
-Protection Act and the outreach rules wherever you contact businesses.
-
-## Related actors
-
-- [Website Tech Stack Checker](https://apify.com/m_ctim/website-tech-stack-detector): the full tech-stack detection this actor builds on
-- [Tech Stack Lead Finder](https://apify.com/m_ctim/tech-stack-lead-finder): find sites by the technology they use (e.g. Shopify stores without Klaviyo)
 - [Website Email & Phone Extractor](https://apify.com/m_ctim/website-lead-extractor): contact details from any list of websites
+- [Website Tech Stack Detector](https://apify.com/m_ctim/website-tech-stack-detector): what a site is built on (CMS, hosting, analytics), one row per URL
+- [Tech Stack Lead Finder](https://apify.com/m_ctim/tech-stack-lead-finder): find sites by the technology they use, for example Shopify stores without Klaviyo
+
+## Notes
+
+**Website statuses**
+
+| Status | Meaning |
+|---|---|
+| `none` | No website listed |
+| `social_only` | The "website" is a Facebook, Instagram, TikTok, WhatsApp, Linktree, Google or booking-app profile (Fresha, Booksy...) |
+| `broken` | Doesn't load, doesn't resolve, errors, shows "page not found", or is parked, for sale or suspended |
+| `dead_builder` | Built on a site builder that has shut down (Google Business Profile websites, Adobe Muse, Business Catalyst, FrontPage, iWeb...) |
+| `free_subdomain` | Lives on a free address like `salon.wixsite.com` or `plumber.blogspot.com` |
+| `blocked` | The site refuses automated checks (bot protection or robots.txt). Reported, never worked around, and free. These rows get no score (`opportunityScore: null`) and a "Couldn't audit" note, so they never pass for healthy sites |
+| `ok` | The site loads |
+
+**How the score works.** It adds up points for every gap found, capped at 100:
+
+| Signal | Points |
+|---|---|
+| No website | 80 |
+| Only a social or listing page | 75 |
+| Broken site, or built on a dead builder | 70 |
+| On a free subdomain (for example `salon.wixsite.com`) | 50 |
+| Placeholder page ("coming soon") | 40 |
+| Copyright 8+ years old (5-7 years: 20, 3-4 years: 10) | 40 |
+| No HTTPS, or a broken or unverifiable SSL certificate | 20 |
+| Not mobile friendly | 20 |
+| Listed website link leads to a missing page (the homepage works and is audited instead) | 15 |
+| Incomplete SSL certificate chain (browsers cope, some apps and browsers warn) | 10 |
+| Appointment business (salon, clinic, dentist...) with no online booking | 12 |
+| Homepage over 5 seconds (over 3 seconds: 7) | 12 |
+| Outdated WordPress (below 6.0) | 10 |
+| Established business: 20+ reviews rated 4.0+ (more likely to pay) | 10 |
+| HTTP doesn't redirect to HTTPS | 5 |
+| No page title, or no meta description | 5 each |
+
+Roughly: **70+** means no working website or a badly outdated one, **40-70** a site with clear problems, and **under 20** a site in decent shape. Sites that couldn't be audited have no score.
+
+**How it checks.** Two requests per site: `robots.txt` (which also tells whether HTTPS works) and the page itself. Full depth adds the contact page, and a dead listed link adds the homepage. There's no headless browser and no proxies. It uses an honest user agent, respects `robots.txt`, spaces requests to the same site at least a second apart, and audits businesses that share one website once. One bad site never stops the run.
+
+**Limitations.** Content drawn entirely by JavaScript can hide booking widgets and copyright years; those show as unknown and are never guessed. Load time is measured from Apify's servers, not from the business's country.
+
+**Data and outreach compliance.** The output is business information the companies publish themselves: their website, business phone and generic business email. Personal-looking addresses of named staff are skipped on purpose. You are responsible for how you use it: follow GDPR, PECR in the UK, CAN-SPAM in the US, Kenya's Data Protection Act and the outreach rules wherever you contact businesses.
+
+**Feedback.** If you use this for client work, tell me in the Issues tab what you'd want next: other countries' quirks, other checks, a different score. I read every issue.
