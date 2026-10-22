@@ -13,44 +13,44 @@ Every listed website is actually opened, so a business whose domain has expired,
 
 ## Example output
 
-Real output from a run on Apify on 2026-10-19, checking 5 beauty salons in Nairobi. The business's name, website and phone number are hidden here; every other field is exactly what the run returned.
+Real output from a run on Apify on 2026-10-22, checking 5 local businesses in 5 countries: a nail salon in New York, a bakery in Toronto, a restaurant in Cape Town, an electrician in Berlin and a dental practice in Sydney. The salon's name, website and phone number are hidden here; every other field shown is exactly what the run returned.
 
 ```json
 {
-  "name": "(beauty salon in Nairobi, name hidden)",
+  "name": "(nail salon in Brooklyn, New York, name hidden)",
   "category": "Beauty salon",
-  "city": "Nairobi",
-  "country": "KE",
-  "phone": "+2547XXXXXXXX",
-  "phoneSource": "website",
-  "websiteUrl": "https://(hidden).com/beauty-salon",
+  "city": "Brooklyn",
+  "country": "US",
+  "phone": "+1646XXXXXXX",
+  "phoneSource": "input",
+  "websiteUrl": "https://(hidden).com/",
   "websiteStatus": "ok",
-  "websiteError": "listed page not found (HTTP 404), homepage audited instead",
   "https": true,
   "httpRedirectsToHttps": true,
   "mobileFriendly": true,
-  "responseMs": 24,
-  "lastCopyrightYear": 2018,
-  "hasBooking": false,
-  "opportunityScore": 67,
+  "responseMs": 1167,
+  "techStack": ["WordPress", "jQuery"],
+  "lastCopyrightYear": 2016,
+  "missingMetaDescription": true,
+  "hasBooking": true,
+  "opportunityScore": 45,
   "opportunityReasons": [
-    "Copyright still says 2018",
-    "Listed website link leads to a missing page",
-    "No online booking"
+    "Copyright still says 2016",
+    "No meta description"
   ],
-  "pitchAngle": "(Salon)'s website still says © 2018 and is listed with a link to a missing page; a refresh could bring in more customers.",
-  "auditedAt": "2026-10-19T04:01:31.890Z"
+  "pitchAngle": "(Salon)'s website still says © 2016 and is missing basic SEO tags; a refresh could bring in more customers.",
+  "auditedAt": "2026-10-22T07:38:07.190Z"
 }
 ```
 
-The other 4 salons in that run:
+The other 4 businesses in that run:
 
-| Status | Score | Main reason |
-|---|---|---|
-| `none` | 80 | No website |
-| `social_only` | 75 | Only a Facebook page, no website |
-| `broken` | 70 | Website not working: domain doesn't resolve |
-| `ok` | 0 | Site in good shape, little to pitch |
+| Business | Status | Score | Main reason |
+|---|---|---|---|
+| Bakery, Toronto, Canada | `social_only` | 75 | Only a Facebook page, no website |
+| Restaurant, Cape Town, South Africa | `dead_builder` | 70 | Built on Google Business Profile websites (shut down in 2024) |
+| Electrician, Berlin, Germany | `broken` | 70 | Website not working: domain parked or for sale |
+| Dental practice, Sydney, Australia | `ok` | 0 | Site in good shape, little to pitch |
 
 ## What it costs
 
@@ -109,7 +109,7 @@ Give `datasetId`, `businesses`, or both.
 
 ### Chain it after a Google Maps scraper
 
-1. Run a Google Maps scraper on Apify (for example **Google Maps Scraper** by compass) with your search, for example "hair salon" in "Nairobi". Include the place details that carry the website and phone.
+1. Run a Google Maps scraper on Apify (for example **Google Maps Scraper** by compass) with your search, for example "hair salon" in "Chicago". Include the place details that carry the website and phone.
 2. When it finishes, open the run's **Storage** tab and copy the **dataset ID**.
 3. Start Website Gap Finder with that ID in `datasetId`.
 
