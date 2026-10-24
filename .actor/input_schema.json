@@ -47,6 +47,11 @@
                 { "name": "Corner Barbershop (example: no website)", "category": "Barber shop", "city": "Austin", "country": "US", "phone": "(512) 555-0142" },
                 { "name": "Sunrise Nails (example: Instagram only)", "website": "https://www.instagram.com/example", "category": "Nail salon", "city": "Nairobi", "country": "KE" },
                 { "name": "Example Plumbing Ltd", "website": "https://example.com", "category": "Plumber", "city": "Manchester", "country": "GB" }
+            ],
+            "default": [
+                { "name": "Corner Barbershop (example: no website)", "category": "Barber shop", "city": "Austin", "country": "US", "phone": "(512) 555-0142" },
+                { "name": "Sunrise Nails (example: Instagram only)", "website": "https://www.instagram.com/example", "category": "Nail salon", "city": "Nairobi", "country": "KE" },
+                { "name": "Example Plumbing Ltd", "website": "https://example.com", "category": "Plumber", "city": "Manchester", "country": "GB" }
             ]
         },
         "auditDepth": {

@@ -2,6 +2,15 @@ import { Actor, log } from 'apify';
 import { EVENTS } from './config.js';
 import { loadBusinesses } from './sources/index.js';
 import { CATEGORIES } from './sources/osm.js';
+import { emptyRunNote } from './note.js';
+
+// The same three made-up businesses as the input form's example, used when a run gets no input at all
+// (an AI agent calling with {}, or an empty API call): no website, Instagram only, and a site that loads.
+const EXAMPLE_BUSINESSES = [
+    { name: 'Corner Barbershop (example: no website)', category: 'Barber shop', city: 'Austin', country: 'US', phone: '(512) 555-0142' },
+    { name: 'Sunrise Nails (example: Instagram only)', website: 'https://www.instagram.com/example', category: 'Nail salon', city: 'Nairobi', country: 'KE' },
+    { name: 'Example Plumbing Ltd', website: 'https://example.com', category: 'Plumber', city: 'Manchester', country: 'GB' },
+];
 import { auditWebsite } from './audit/audit.js';
 import { scoreBusiness } from './score.js';
 import { resolveCountry, countryFromHostname, toE164 } from './phone.js';
@@ -41,7 +50,9 @@ if ((search || datasetId) && businesses.some(isFormExample)) {
 }
 
 if (!datasetId && businesses.length === 0 && !search) {
-    await Actor.fail('Nothing to audit. Pick a type of business and a city to search, give "datasetId" (the dataset of another actor, e.g. a Google Maps scraper run), or a "businesses" list with at least one business.');
+    businesses = EXAMPLE_BUSINESSES;
+    log.info('No search, dataset or businesses given, so auditing the three example businesses. Pick a type of business and a city, '
+        + 'or give "datasetId" (e.g. a Google Maps scraper run) or a "businesses" list, to audit real ones.');
 }
 
 const auditDepth = input.auditDepth === 'full' ? 'full' : 'basic';
@@ -169,7 +180,20 @@ async function runPool(iterable, concurrency, worker) {
     await Promise.all(Array.from({ length: concurrency }, lane));
 }
 
-await runPool(loadBusinesses({ datasetId, businesses, search }, counters), options.maxConcurrency, processBusiness);
+try {
+    await runPool(loadBusinesses({ datasetId, businesses, search }, counters), options.maxConcurrency, processBusiness);
+} catch (err) {
+    // A source that can't be read at all (a place OpenStreetMap doesn't know, its search server still busy after retries,
+    // an unreadable dataset) fails the run with that plain reason rather than a stack trace. Nothing is charged for it.
+    await Actor.fail(err.message);
+}
+
+// Never end with an empty dataset: say why nothing was saved, in one uncharged row.
+if (stats.pushed === 0) {
+    const note = emptyRunNote(stats, counters, options, search, search ? CATEGORIES[search.category].title : undefined);
+    await Actor.pushData(note);
+    log.info(`No businesses saved: ${note.note}`);
+}
 
 const s = stats.byStatus;
 const averageScore = stats.scored ? Math.round(stats.scoreSum / stats.scored) : null; // blocked sites have no score
