@@ -3,14 +3,39 @@
     "type": "object",
     "schemaVersion": 1,
     "properties": {
+        "searchCategory": {
+            "title": "Type of business",
+            "type": "string",
+            "editor": "select",
+            "enum": ["plumber","electrician","hvac","roofer","carpenter","painter","hair","beauty","massage","tattoo","dentist","doctor","physio","vet","optician","gym","restaurant","cafe","bakery","hotel","car_repair","car_dealer","lawyer","accountant","estate_agent","florist","clothes","furniture","photographer","driving_school","childcare","laundry"],
+            "enumTitles": ["Plumbers","Electricians","Heating and air conditioning (HVAC)","Roofers","Carpenters and joiners","Painters and decorators","Hair salons and barbers","Beauty and nail salons","Massage and spas","Tattoo and piercing studios","Dentists","Doctors and clinics","Physiotherapists","Veterinarians","Opticians","Gyms and fitness studios","Restaurants","Cafes","Bakeries","Hotels and guest houses","Car repair garages","Car dealers","Lawyers","Accountants","Real estate agents","Florists","Clothing stores","Furniture stores","Photographers","Driving schools","Nurseries and childcare","Laundry and dry cleaning"],
+            "sectionCaption": "Search a city",
+            "sectionDescription": "Pick a type of business and a place. Gap Finder finds them on OpenStreetMap and audits every one that lists a website, in one run. Businesses with no website on OpenStreetMap are left out, because there a missing website usually means nobody added it. For full coverage, including businesses with no website at all, use a Google Maps scraper dataset below instead.",
+            "description": "What kind of local business to look for."
+        },
+        "searchLocation": {
+            "title": "City or area to search",
+            "type": "string",
+            "editor": "textfield",
+            "description": "A city, town or district, e.g. \"Denver, USA\", \"Manchester, UK\" or \"Westlands, Nairobi\". Add the country when the name is common."
+        },
+        "maxBusinesses": {
+            "title": "Max businesses from the search",
+            "type": "integer",
+            "editor": "number",
+            "default": 100,
+            "minimum": 1,
+            "maximum": 2000,
+            "description": "The most businesses the search will audit. Each one is charged, so this also caps the cost of the run."
+        },
         "datasetId": {
             "title": "Dataset ID (e.g. from a Google Maps scraper)",
             "type": "string",
             "editor": "textfield",
             "resourceType": "dataset",
             "resourcePermissions": ["READ"],
-            "sectionCaption": "Businesses to audit",
-            "sectionDescription": "Use a dataset from another actor, a list of your own, or both. At least one is required.",
+            "sectionCaption": "Or audit businesses you already have",
+            "sectionDescription": "Use a dataset from another actor, a list of your own, or both, with or without a search. Give at least a search, a dataset or a list.",
             "description": "ID of an Apify dataset produced by another actor, such as a Google Maps scraper run (open the run, then Storage > Dataset to copy the ID). Common field names are mapped automatically: title/name, website/url, phone, address, city, countryCode, categoryName, totalScore/rating, reviewsCount and the Google Maps url. Permanently closed places and duplicates are skipped."
         },
         "businesses": {

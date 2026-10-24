@@ -1,11 +1,14 @@
 // Where the businesses come from.
 //
-// Today there is one mode, "enrich": audit businesses you already have, from another actor's
-// dataset (e.g. a Google Maps scraper) and/or the manual `businesses` list. A "discover" mode
-// (Google Places, OpenStreetMap...) can be added as another async generator here that yields
-// the same records from toBusinessRecord(); main.js, the audit and the scoring don't change.
+// Two modes, which can be combined:
+// - "search": find businesses of one type in a city on OpenStreetMap (osm.js);
+// - "enrich": audit businesses you already have, from another actor's dataset (e.g. a Google Maps
+//   scraper) and/or the manual `businesses` list.
+// Every source yields items that go through toBusinessRecord(), so main.js, the audit and the scoring
+// don't care where a business came from.
 import { Actor, log } from 'apify';
 import { toBusinessRecord } from './records.js';
+import { discoverBusinesses } from './osm.js';
 
 const PAGE_SIZE = 1000;
 
@@ -30,10 +33,10 @@ async function* datasetItems(datasetId) {
 /**
  * Normalized business records from every source in the input, duplicates removed
  * (same Google place ID, or same name + address).
- * @param {{ datasetId?: string, businesses?: object[] }} input
- * @param {{ skippedClosed: number, skippedEmpty: number, duplicates: number }} counters
+ * @param {{ datasetId?: string, businesses?: object[], search?: { category: string, location: string, maxBusinesses: number } }} input
+ * @param {{ skippedClosed: number, skippedEmpty: number, duplicates: number, search: object }} counters
  */
-export async function* loadBusinesses({ datasetId, businesses }, counters) {
+export async function* loadBusinesses({ datasetId, businesses, search }, counters) {
     const seen = new Set();
 
     function* accept(item, source) {
@@ -55,6 +58,9 @@ export async function* loadBusinesses({ datasetId, businesses }, counters) {
         yield record;
     }
 
+    if (search) {
+        for await (const item of discoverBusinesses(search, counters.search)) yield* accept(item, 'openstreetmap');
+    }
     if (datasetId) {
         log.info(`Reading businesses from dataset ${datasetId}`);
         for await (const item of datasetItems(datasetId)) yield* accept(item, 'dataset');

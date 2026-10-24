@@ -1,9 +1,10 @@
 # Website Gap Finder: Businesses Without Websites + Audit
 
-For web design agencies, freelancers and lead sellers: give it the businesses from a Google Maps scrape (or your own list) and get back which ones have no website, a broken one or an outdated one, each scored 0 to 100 with a one-line pitch to open your outreach with.
+For web design agencies, freelancers and lead sellers: search a city for a type of business, or give it the businesses from a Google Maps scrape (or your own list), and get back which ones have no working website, a broken one or an outdated one, each scored 0 to 100 with a one-line pitch to open your outreach with.
 
 ## What you get
 
+- **A one-step search:** pick a type of business (32 types, from plumbers and dentists to cafes and salons) and a city anywhere in the world. Businesses come from OpenStreetMap, and every one that lists a website is audited.
 - `websiteStatus` for every business: `none`, `social_only` (only a Facebook or Instagram page), `broken`, `dead_builder`, `free_subdomain`, `blocked` or `ok`
 - `opportunityScore` (0 to 100), the `opportunityReasons` behind it, and a ready `pitchAngle` sentence
 - For sites that load: HTTPS, mobile layout, load time, the last copyright year, tech stack (WordPress, Wix, Shopify and more) and online booking, with the provider's name
@@ -75,11 +76,11 @@ Pay per event, only for the rows you receive. Compute and traffic are included.
 
 Any 1,000-business run costs between $1 (no business has a website) and $4 (every one has a site and contact details).
 
-**Free:** sites that block automated checks (saved with no score and a "Couldn't audit" note), and businesses left out by `onlyOpportunities`, which are neither saved nor charged.
+**Free:** the search itself, sites that block automated checks (saved with no score and a "Couldn't audit" note), and businesses left out by `onlyOpportunities` or by the search, which are neither saved nor charged.
 
 ## Use cases
 
-- **Web designers:** scrape "hair salon" in your city, keep everything scoring 50 or more, and work down the list starting with businesses that have no site at all.
+- **Web designers:** search "Hair salons and barbers" in your city, or run a Google Maps scraper for it, keep everything scoring 50 or more, and work down the list.
 - **SEO and marketing consultants:** find businesses whose sites lack HTTPS, a mobile layout or online booking, and pitch the fix.
 - **Lead sellers:** hand clients a scored list with a reason and a pitch line on every row, not a raw directory dump.
 
@@ -87,6 +88,9 @@ Any 1,000-business run costs between $1 (no business has a website) and $4 (ever
 
 | Field | Type | Description |
 |---|---|---|
+| `searchCategory` | select | Type of business to search for: plumbers, electricians, HVAC, roofers, carpenters, painters, hair salons and barbers, beauty and nail salons, massage and spas, tattoo studios, dentists, doctors and clinics, physiotherapists, vets, opticians, gyms, restaurants, cafes, bakeries, hotels, car repair, car dealers, lawyers, accountants, real estate agents, florists, clothing and furniture stores, photographers, driving schools, childcare and laundries. |
+| `searchLocation` | string | City or area to search, e.g. "Manchester, UK" or "Westlands, Nairobi". Used with `searchCategory`. |
+| `maxBusinesses` | integer | The most businesses the search audits, which also caps its cost. Default `100`, up to `2000`. |
 | `datasetId` | string | ID of a dataset from another actor, such as a Google Maps scraper run. Field names are mapped automatically: `title`/`name`, `website`/`url`, `phone`, `address`, `city`, `countryCode`, `categoryName`, `totalScore`/`rating`, `reviewsCount`, and the Google Maps `url`. Permanently closed places and duplicates are skipped. |
 | `businesses` | array | Your own list: `name`, `website`, and optionally `phone`, `address`, `city`, `country` (name or 2-letter code) and `category`. |
 | `auditDepth` | `basic` / `full` | Basic checks the homepage. Full also opens the contact page when one is linked. Default `basic`. |
@@ -95,7 +99,21 @@ Any 1,000-business run costs between $1 (no business has a website) and $4 (ever
 | `minScore` | integer 0-100 | Default `50`. |
 | `maxConcurrency` | integer | Businesses audited at once. Default `10`. |
 
-Give `datasetId`, `businesses`, or both.
+Give a search, `datasetId`, `businesses`, or any combination.
+
+Search a city:
+
+```json
+{
+  "searchCategory": "hair",
+  "searchLocation": "Manchester, UK",
+  "maxBusinesses": 100,
+  "onlyOpportunities": true,
+  "minScore": 50
+}
+```
+
+Or audit a Google Maps scrape:
 
 ```json
 {
@@ -157,6 +175,13 @@ To make it automatic, add an integration to the Google Maps scraper task: **Run 
 | No page title, or no meta description | 5 each |
 
 Roughly: **70+** means no working website or a badly outdated one, **40-70** a site with clear problems, and **under 20** a site in decent shape. Sites that couldn't be audited have no score.
+
+**Search mode and OpenStreetMap.** The search looks up the place with OpenStreetMap's Nominatim, then asks the Overpass API for that type of business there: one request each per run.
+- **Coverage depends on how well an area is mapped.** In test searches on 2026-10-23, Manchester had 257 hair salons and barbers (19 listing a website), Toronto's dentists, Cape Town's restaurants and Sydney's beauty salons 300 or more each, and Denver only 7 plumbers.
+- **Businesses with no website on OpenStreetMap are left out.** There, a missing website usually means nobody added it, so the search can't tell you who truly has no site. For that, use a Google Maps scraper dataset.
+- **Chains** (listings tagged with a brand) are skipped.
+- If OpenStreetMap's free search server is busy, the run waits and retries for up to 90 seconds.
+- Business data from the search is © OpenStreetMap contributors, under the Open Database License. Each row's `placeId` (for example `osm:node/123`) points to the listing on openstreetmap.org.
 
 **How it checks.** Two requests per site: `robots.txt` (which also tells whether HTTPS works) and the page itself. Full depth adds the contact page, and a dead listed link adds the homepage. There's no headless browser and no proxies. It uses an honest user agent, respects `robots.txt`, spaces requests to the same site at least a second apart, and audits businesses that share one website once. One bad site never stops the run.
 
