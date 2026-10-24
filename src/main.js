@@ -54,7 +54,7 @@ const options = {
 };
 log.info('Starting', { search, datasetId: datasetId || null, businesses: businesses.length, ...options });
 
-const counters = { skippedClosed: 0, skippedEmpty: 0, duplicates: 0, search: { found: 0, chains: 0, noWebsiteListed: 0, overLimit: 0, place: null } };
+const counters = { skippedClosed: 0, skippedEmpty: 0, duplicates: 0, search: { found: 0, capped: false, chains: 0, noWebsiteListed: 0, overLimit: 0, place: null } };
 const stats = {
     processed: 0, pushed: 0, filteredOut: 0, filteredOutUnaudited: 0, errors: 0, scored: 0, scoreSum: 0,
     byStatus: { none: 0, ok: 0, broken: 0, social_only: 0, free_subdomain: 0, dead_builder: 0, blocked: 0 },
@@ -187,11 +187,11 @@ log.info('Summary', {
     filteredOutBelowMinScore: stats.filteredOut,
     filteredOutUnaudited: stats.filteredOutUnaudited,
     skipped: { permanentlyClosed: counters.skippedClosed, empty: counters.skippedEmpty, duplicates: counters.duplicates, errors: stats.errors },
-    ...(search ? { openStreetMap: { place: counters.search.place, found: counters.search.found, noWebsiteListed: counters.search.noWebsiteListed, chains: counters.search.chains, overMaxBusinesses: counters.search.overLimit } } : {}),
+    ...(search ? { openStreetMap: { place: counters.search.place, found: counters.search.found, foundIsCapped: counters.search.capped, noWebsiteListed: counters.search.noWebsiteListed, chains: counters.search.chains, overMaxBusinesses: counters.search.overLimit } } : {}),
     billableEvents: stats.billable, // what was charged, once pricing is active
 });
 const searchNote = search
-    ? `Search: ${counters.search.found} found on OpenStreetMap, ${counters.search.noWebsiteListed} list no website, ${counters.search.chains} chains skipped. `
+    ? `Search: ${counters.search.found}${counters.search.capped ? '+' : ''} found on OpenStreetMap, ${counters.search.noWebsiteListed} list no website, ${counters.search.chains} chains skipped. `
     : '';
 await Actor.setStatusMessage(
     `${searchNote}Audited ${stats.processed} businesses: ${s.none} without a website, ${s.broken} broken, ${s.social_only} social only, `

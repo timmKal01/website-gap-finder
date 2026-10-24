@@ -144,8 +144,11 @@ export async function* discoverBusinesses({ category, location, maxBusinesses },
     counters.place = place.display_name;
     log.info(`Searching OpenStreetMap for ${CATEGORIES[category].title.toLowerCase()} in ${place.display_name}`);
 
-    // Most listings have no website tag, so ask for several times more than will be kept.
-    const data = await overpass(buildOverpassQuery(category, place, Math.min(5000, maxBusinesses * 10)));
+    // Most listings have no website tag (in tests only 7 to 38% had one), so ask for far more than will be kept.
+    // Tags-only output is small, so even the 10,000 ceiling is a few MB.
+    const fetchLimit = Math.min(10_000, Math.max(2_000, maxBusinesses * 20));
+    const data = await overpass(buildOverpassQuery(category, place, fetchLimit));
+    counters.capped = (data.elements?.length ?? 0) >= fetchLimit;
     let kept = 0;
     for (const el of data.elements ?? []) {
         counters.found++;
@@ -160,7 +163,7 @@ export async function* discoverBusinesses({ category, location, maxBusinesses },
         kept++;
         yield item;
     }
-    log.info(`OpenStreetMap: ${counters.found} ${CATEGORIES[category].title.toLowerCase()} found, ${kept} with a website listed will be audited`
+    log.info(`OpenStreetMap: ${counters.found}${counters.capped ? '+' : ''} ${CATEGORIES[category].title.toLowerCase()} found, ${kept} with a website listed will be audited`
         + ` (${counters.noWebsiteListed} list no website, ${counters.chains} chains skipped${counters.overLimit ? `, ${counters.overLimit} over maxBusinesses` : ''})`);
 }
 
