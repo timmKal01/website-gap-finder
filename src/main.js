@@ -92,6 +92,7 @@ async function processBusiness(business) {
     const inputPhone = business.phoneRaw ? (toE164(business.phoneRaw, country) ?? business.phoneRaw) : null;
     const sitePhone = audit.contacts?.phone ?? null;
     const row = {
+        rowType: 'business',
         name: business.name,
         category: business.category,
         address: business.address,

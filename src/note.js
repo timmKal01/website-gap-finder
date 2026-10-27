@@ -37,6 +37,7 @@ export function emptyRunNote(stats, counters, options, search, categoryTitle) {
     if (reasons.length === 0) reasons.push('No businesses were found in the input.');
 
     return {
+        rowType: 'note',
         name: 'No businesses saved in this run (not charged)',
         websiteStatus: null,
         opportunityScore: null,

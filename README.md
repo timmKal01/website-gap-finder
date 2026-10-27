@@ -18,6 +18,7 @@ Real output from a run on Apify on 2026-10-22, checking 5 local businesses in 5 
 
 ```json
 {
+  "rowType": "business",
   "name": "(nail salon in Brooklyn, New York, name hidden)",
   "category": "Beauty salon",
   "city": "Brooklyn",
@@ -43,6 +44,8 @@ Real output from a run on Apify on 2026-10-22, checking 5 local businesses in 5 
   "auditedAt": "2026-10-22T07:38:07.190Z"
 }
 ```
+
+`rowType` is `"business"` on every business row. A run that saves no businesses returns one uncharged `"note"` row with a `note` saying why.
 
 The other 4 businesses in that run:
 
