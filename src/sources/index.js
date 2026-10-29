@@ -1,14 +1,14 @@
 // Where the businesses come from.
 //
 // Two modes, which can be combined:
-// - "search": find businesses of one type in a city on OpenStreetMap (osm.js);
+// - "search": find businesses of one type in a city in Overture Maps open data (search.js);
 // - "enrich": audit businesses you already have, from another actor's dataset (e.g. a Google Maps
 //   scraper) and/or the manual `businesses` list.
 // Every source yields items that go through toBusinessRecord(), so main.js, the audit and the scoring
 // don't care where a business came from.
 import { Actor, log } from 'apify';
 import { toBusinessRecord } from './records.js';
-import { discoverBusinesses } from './osm.js';
+import { discoverBusinesses } from './search.js';
 
 const PAGE_SIZE = 1000;
 
@@ -59,7 +59,7 @@ export async function* loadBusinesses({ datasetId, businesses, search }, counter
     }
 
     if (search) {
-        for await (const item of discoverBusinesses(search, counters.search)) yield* accept(item, 'openstreetmap');
+        for await (const item of discoverBusinesses(search, counters.search)) yield* accept(item, 'overture');
     }
     if (datasetId) {
         log.info(`Reading businesses from dataset ${datasetId}`);

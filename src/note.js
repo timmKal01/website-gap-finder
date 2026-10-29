@@ -16,11 +16,11 @@ export function emptyRunNote(stats, counters, options, search, categoryTitle) {
         const where = counters.search.place ?? search.location;
         const s = counters.search;
         if (s.found === 0) {
-            reasons.push(`OpenStreetMap lists no ${what} in ${where}. Try a nearby bigger city, another type of business, or a Google Maps scraper dataset.`);
+            reasons.push(`Overture Maps lists no open ${what} in ${where}. Try a nearby bigger city, another type of business, or a Google Maps scraper dataset.`);
         } else if (stats.processed === 0) {
-            reasons.push(`OpenStreetMap lists ${s.found}${s.capped ? '+' : ''} ${what} in ${where}, but ${s.noWebsiteListed === 1 ? '1 lists' : `${s.noWebsiteListed} list`} no website`
-                + `${s.chains ? ` and ${s.chains === 1 ? '1 is a chain' : `${s.chains} are chains`}` : ''}, so there was no website to audit. On OpenStreetMap a missing website`
-                + ' often just means nobody added it; a Google Maps scraper dataset covers those businesses.');
+            reasons.push(`Overture Maps lists ${s.found} ${what} in ${where}, but ${s.noWebsiteListed === 1 ? '1 lists' : `${s.noWebsiteListed} list`} no website`
+                + `${s.chains ? ` and ${s.chains === 1 ? '1 is a chain' : `${s.chains} are chains`}` : ''}, so there was no website to audit. A Google Maps scraper dataset`
+                + ' can fill in listings with missing websites.');
         }
     }
     if (options.onlyOpportunities && stats.processed > 0 && stats.filteredOut + stats.filteredOutUnaudited >= stats.processed) {

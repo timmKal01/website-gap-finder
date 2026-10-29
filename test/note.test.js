@@ -9,7 +9,7 @@ const search = { category: 'plumber', location: 'Denver, USA' };
 
 test('a search that found nothing says so and suggests what to try', () => {
     const n = emptyRunNote(stats(), counters(), opts(), search, 'Plumbers');
-    assert.match(n.note, /OpenStreetMap lists no plumbers in Denver, Colorado/);
+    assert.match(n.note, /Overture Maps lists no open plumbers in Denver, Colorado/);
     assert.equal(n.name, 'No businesses saved in this run (not charged)');
     assert.equal(n.search.found, 0);
 });

@@ -1,7 +1,7 @@
 import { Actor, log } from 'apify';
 import { EVENTS } from './config.js';
 import { loadBusinesses } from './sources/index.js';
-import { CATEGORIES } from './sources/osm.js';
+import { CATEGORIES } from './sources/categories.js';
 import { emptyRunNote } from './note.js';
 
 // The same three made-up businesses as the input form's example, used when a run gets no input at all
@@ -21,20 +21,28 @@ const input = (await Actor.getInput()) ?? {};
 const datasetId = typeof input.datasetId === 'string' ? input.datasetId.trim() : '';
 let businesses = Array.isArray(input.businesses) ? input.businesses : [];
 
-if (input.businesses !== undefined && input.businesses !== null && !Array.isArray(input.businesses)) {
-    await Actor.fail('Input "businesses" must be an array of objects, e.g. [{ "name": "Joe\'s Barbers", "website": "joesbarbers.com" }].');
+// Input that can't be used ends the run with one uncharged "error" row saying what to change, not a failed run:
+// a failure reads as "the tool is broken", and Apify's Store shows each actor's share of succeeded runs.
+async function stopWithError(error) {
+    await Actor.pushData({ rowType: 'error', name: "Couldn't start the audit (not charged)", error, auditedAt: new Date().toISOString() });
+    await Actor.setStatusMessage(`Nothing audited or charged: ${error}`, { isStatusMessageTerminal: true });
+    await Actor.exit();
 }
 
-// Search mode: a business type plus a place, looked up on OpenStreetMap.
+if (input.businesses !== undefined && input.businesses !== null && !Array.isArray(input.businesses)) {
+    await stopWithError('Input "businesses" must be an array of objects, e.g. [{ "name": "Joe\'s Barbers", "website": "joesbarbers.com" }].');
+}
+
+// Search mode: a business type plus a place, looked up in Overture Maps open data.
 const searchCategory = typeof input.searchCategory === 'string' ? input.searchCategory.trim() : '';
 const searchLocation = typeof input.searchLocation === 'string' ? input.searchLocation.trim() : '';
 if (Boolean(searchCategory) !== Boolean(searchLocation)) {
-    await Actor.fail(searchCategory
+    await stopWithError(searchCategory
         ? 'Add a "City or area to search" for the search, e.g. "Denver, USA".'
         : 'Pick a "Type of business" for the search, e.g. Plumbers.');
 }
 if (searchCategory && !CATEGORIES[searchCategory]) {
-    await Actor.fail(`Unknown business type "${searchCategory}". Use one of: ${Object.keys(CATEGORIES).join(', ')}.`);
+    await stopWithError(`Unknown business type "${searchCategory}". Use one of: ${Object.keys(CATEGORIES).join(', ')}.`);
 }
 const search = searchCategory
     ? { category: searchCategory, location: searchLocation, maxBusinesses: Math.min(2000, Math.max(1, Number.isFinite(input.maxBusinesses) ? input.maxBusinesses : 100)) }
@@ -161,12 +169,22 @@ async function processBusiness(business) {
     if (stopped) log.warning('The run reached its maximum cost (set by the user); stopping after the businesses in progress.');
 }
 
+// The run's time limit (set by whoever started it). New audits stop this long before it, so the run finishes with
+// what it has instead of being cut off as "timed out".
+const DEADLINE_MARGIN_MS = 60_000;
+const timeoutAt = Actor.getEnv().timeoutAt;
+let timeRanOut = false;
+const nearDeadline = () => {
+    if (timeoutAt && Date.now() > new Date(timeoutAt).getTime() - DEADLINE_MARGIN_MS) timeRanOut = true;
+    return timeRanOut;
+};
+
 /** Run `worker` over an async iterable with at most `concurrency` in flight. */
 async function runPool(iterable, concurrency, worker) {
     const iterator = iterable[Symbol.asyncIterator]();
     async function lane() {
         for (;;) {
-            if (stopped) return;
+            if (stopped || nearDeadline()) return;
             const next = await iterator.next();
             if (next.done) return;
             try {
@@ -181,17 +199,24 @@ async function runPool(iterable, concurrency, worker) {
     await Promise.all(Array.from({ length: concurrency }, lane));
 }
 
+let sourceProblem = null;
 try {
     await runPool(loadBusinesses({ datasetId, businesses, search }, counters), options.maxConcurrency, processBusiness);
 } catch (err) {
-    // A source that can't be read at all (a place OpenStreetMap doesn't know, its search server still busy after retries,
-    // an unreadable dataset) fails the run with that plain reason rather than a stack trace. Nothing is charged for it.
-    await Actor.fail(err.message);
+    // A source that can't be read (Overture's files or the place search not answering, an unknown or too-large place,
+    // an unreadable dataset) becomes one uncharged row with the plain reason. Businesses already audited are kept.
+    sourceProblem = err;
+    log.warning(err.message);
+    await Actor.pushData(err.sourceDown
+        ? { rowType: 'note', name: "Couldn't read the business data (not charged)", note: `${err.message}. Nothing more was charged; try again in a few minutes.`, auditedAt: new Date().toISOString() }
+        : { rowType: 'error', name: "Couldn't read the businesses (not charged)", error: err.message, auditedAt: new Date().toISOString() });
 }
+if (timeRanOut) log.warning(`Stopped starting new audits ${DEADLINE_MARGIN_MS / 1000} s before the run's time limit, so the run ends with the businesses already audited.`);
 
 // Never end with an empty dataset: say why nothing was saved, in one uncharged row.
-if (stats.pushed === 0) {
+if (stats.pushed === 0 && !sourceProblem) {
     const note = emptyRunNote(stats, counters, options, search, search ? CATEGORIES[search.category].title : undefined);
+    if (timeRanOut) note.note = "The run's time limit was reached before any business was audited. Run again with a longer time limit.";
     await Actor.pushData(note);
     log.info(`No businesses saved: ${note.note}`);
 }
@@ -212,15 +237,17 @@ log.info('Summary', {
     filteredOutBelowMinScore: stats.filteredOut,
     filteredOutUnaudited: stats.filteredOutUnaudited,
     skipped: { permanentlyClosed: counters.skippedClosed, empty: counters.skippedEmpty, duplicates: counters.duplicates, errors: stats.errors },
-    ...(search ? { openStreetMap: { place: counters.search.place, found: counters.search.found, foundIsCapped: counters.search.capped, noWebsiteListed: counters.search.noWebsiteListed, chains: counters.search.chains, overMaxBusinesses: counters.search.overLimit } } : {}),
+    ...(search ? { search: { source: 'Overture Maps', place: counters.search.place, found: counters.search.found, noWebsiteListed: counters.search.noWebsiteListed, chains: counters.search.chains, overMaxBusinesses: counters.search.overLimit } } : {}),
+    stoppedBeforeTimeLimit: timeRanOut,
     billableEvents: stats.billable, // what was charged, once pricing is active
 });
 const searchNote = search
-    ? `Search: ${counters.search.found}${counters.search.capped ? '+' : ''} found on OpenStreetMap, ${counters.search.noWebsiteListed} list no website, ${counters.search.chains} chains skipped. `
+    ? `Search: ${counters.search.found} found in Overture Maps, ${counters.search.noWebsiteListed} list no website, ${counters.search.chains} chains skipped. `
     : '';
 await Actor.setStatusMessage(
     `${searchNote}Audited ${stats.processed} businesses: ${s.none} without a website, ${s.broken} broken, ${s.social_only} social only, `
-    + `${s.dead_builder} on dead builders, ${s.blocked} couldn't be audited; average score ${averageScore ?? 'n/a'}. ${stats.pushed} rows saved.`,
+    + `${s.dead_builder} on dead builders, ${s.blocked} couldn't be audited; average score ${averageScore ?? 'n/a'}. ${stats.pushed} rows saved.`
+    + `${timeRanOut ? " Stopped early to finish within the run's time limit; run again with the same input or a longer limit for the rest." : ''}`,
     { isStatusMessageTerminal: true },
 );
 

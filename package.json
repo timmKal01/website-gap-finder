@@ -9,6 +9,8 @@
     "dependencies": {
         "apify": "^3.2.6",
         "cheerio": "^1.2.0",
+        "hyparquet": "^1.31.5",
+        "hyparquet-compressors": "^1.1.2",
         "libphonenumber-js": "^1.13.14",
         "tech-stack-signatures": "https://github.com/timmKal01/tech-stack-signatures/archive/refs/tags/v1.0.0.tar.gz",
         "tldts": "^7.4.16",
