@@ -48,6 +48,16 @@ const search = searchCategory
     ? { category: searchCategory, location: searchLocation, maxBusinesses: Math.min(2000, Math.max(1, Number.isFinite(input.maxBusinesses) ? input.maxBusinesses : 100)) }
     : null;
 
+// A search reads Overture Maps' open data for the whole area (Denver's plumbers peaked at 589 MB locally, and bigger
+// cities read more). actor.json gives a search 2 GB by default; a run started with less gets a row saying so
+// instead of being killed for running out of memory.
+const SEARCH_MEMORY_MBYTES = 2048;
+const memoryMbytes = Actor.getEnv().memoryMbytes;
+if (search && memoryMbytes && memoryMbytes < SEARCH_MEMORY_MBYTES) {
+    await stopWithError(`A city search needs at least ${SEARCH_MEMORY_MBYTES} MB of memory, and this run had ${memoryMbytes} MB. `
+        + `Run it again with Memory set to ${SEARCH_MEMORY_MBYTES} MB, which is the default for a search.`);
+}
+
 // The input form comes pre-filled with three made-up example businesses. When someone runs a search or a dataset,
 // they almost certainly didn't mean to audit (and pay for) those too.
 const isFormExample = (b) => /\(example\b/i.test(b?.name ?? '') || /^https?:\/\/(www\.)?(example\.com|instagram\.com\/example)\/?$/i.test(b?.website ?? '');
@@ -199,9 +209,22 @@ async function runPool(iterable, concurrency, worker) {
     await Promise.all(Array.from({ length: concurrency }, lane));
 }
 
+// One very slow site can keep an audit going for minutes after new audits stop (one took 110 s on 2026-10-29), and a
+// search's map data can take a while too. So shortly before the time limit the run stops waiting for whatever is still
+// in progress and finishes with what it has, rather than being cut off as "timed out".
+const HARD_STOP_MS = 20_000;
+const hardStop = timeoutAt
+    ? new Promise((resolve) => setTimeout(resolve, Math.max(0, new Date(timeoutAt).getTime() - HARD_STOP_MS - Date.now())).unref())
+    : new Promise(() => {});
+
 let sourceProblem = null;
 try {
-    await runPool(loadBusinesses({ datasetId, businesses, search }, counters), options.maxConcurrency, processBusiness);
+    await Promise.race([
+        runPool(loadBusinesses({ datasetId, businesses, search }, counters), options.maxConcurrency, processBusiness),
+        hardStop.then(() => {
+            timeRanOut = true;
+        }),
+    ]);
 } catch (err) {
     // A source that can't be read (Overture's files or the place search not answering, an unknown or too-large place,
     // an unreadable dataset) becomes one uncharged row with the plain reason. Businesses already audited are kept.

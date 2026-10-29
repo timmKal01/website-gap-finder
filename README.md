@@ -65,7 +65,7 @@ Pay per event, only for the rows you receive. Compute and traffic are included.
 | Audited website | $0.003 | Per business whose website was fetched and audited, including sites found broken |
 | Lead without a website | $0.001 | Per business with nothing to fetch: no website, only a social or listing page, or a shut-down site builder |
 | Contacts extracted | $0.001 | Per business, only when `extractContacts` is on and a business email, phone or WhatsApp link was found |
-| Actor start | $0.00005 | Apify's standard fee, once per run (one per GB of memory; the default 512 MB counts as one) |
+| Actor start | $0.00005 | Apify's standard fee, once per run (one per GB of memory: the default 512 MB counts as one, and a city search's 2 GB as two) |
 
 **Worked example: 1,000 businesses from a Google Maps scrape**, with `extractContacts` on. Say 600 of them list a website, 400 have none or only a Facebook or Instagram page, and 300 of the sites show a business email, phone or WhatsApp link:
 
@@ -186,7 +186,7 @@ Roughly: **70+** means no working website or a badly outdated one, **40-70** a s
 - **If the data can't be read,** the run saves one uncharged note saying so instead of failing. Input it can't use (a type of business without a city, an unknown place) gets one uncharged `error` row saying what to change.
 - Business data from the search: Overture Maps Foundation, from sources under CDLA Permissive 2.0, Apache 2.0 (Foursquare) and CC0. Each row's `placeId` (for example `overture:45ac34d4-...`) is the place's Overture ID.
 
-**How it checks.** Two requests per site: `robots.txt` (which also tells whether HTTPS works) and the page itself. Full depth adds the contact page, and a dead listed link adds the homepage. There's no headless browser and no proxies. It uses an honest user agent, respects `robots.txt`, spaces requests to the same site at least a second apart, and audits businesses that share one website once. One bad site never stops the run, and when the run's time limit is close it stops starting new audits and finishes with the ones already done.
+**How it checks.** Two requests per site: `robots.txt` (which also tells whether HTTPS works) and the page itself. Full depth adds the contact page, and a dead listed link adds the homepage. There's no headless browser and no proxies. It uses an honest user agent, respects `robots.txt`, spaces requests to the same site at least a second apart, and audits businesses that share one website once. One bad site never stops the run, and when the run's time limit is close it stops starting new audits and finishes with the ones already done. A city search reads Overture Maps' data for the whole area, so it runs with 2 GB of memory (set automatically when you search; lists and datasets use 512 MB).
 
 **Limitations.** Content drawn entirely by JavaScript can hide booking widgets and copyright years; those show as unknown and are never guessed. Load time is measured from Apify's servers, not from the business's country.
 
