@@ -4,7 +4,7 @@ For web design agencies, freelancers and lead sellers: search a city for a type 
 
 ## What you get
 
-- **A one-step search:** pick a type of business (32 types, from plumbers and dentists to cafes and salons) and a city anywhere in the world. Businesses come from Overture Maps open data, and every one that lists a website is audited.
+- **A one-step search:** pick a type of business (32 types, from plumbers and dentists to cafes and salons) and a city anywhere in the world. Businesses come from Google Maps, with their rating and review count. Every one that lists a website is audited, and the ones with no website at all come back as leads.
 - `websiteStatus` for every business: `none`, `social_only` (only a Facebook or Instagram page), `broken`, `dead_builder`, `free_subdomain`, `blocked` or `ok`
 - `opportunityScore` (0 to 100), the `opportunityReasons` behind it, and a ready `pitchAngle` sentence
 - For sites that load: HTTPS, mobile layout, load time, the last copyright year, tech stack (WordPress, Wix, Shopify and more) and online booking, with the provider's name
@@ -179,12 +179,13 @@ To make it automatic, add an integration to the Google Maps scraper task: **Run 
 
 Roughly: **70+** means no working website or a badly outdated one, **40-70** a site with clear problems, and **under 20** a site in decent shape. Sites that couldn't be audited have no score.
 
-**Search mode and Overture Maps.** The search looks up the place with OpenStreetMap's place search (Nominatim, with Photon as a backup), then reads that type of business from [Overture Maps](https://overturemaps.org) open data: only the part of Overture's public files that covers the area.
-- **Coverage:** in a test search on 2026-10-29, Denver had 265 open plumbers, 207 of them listing a website.
-- **Businesses with no website listed are left out**, because the search is for auditing sites. For businesses with no website at all, use a Google Maps scraper dataset.
-- **Skipped:** chains (places linked to a brand), places marked closed, and places with little evidence they still exist. The best-attested businesses are audited first, up to `maxBusinesses`.
-- **If the data can't be read,** the run saves one uncharged note saying so instead of failing. Input it can't use (a type of business without a city, an unknown place) gets one uncharged `error` row saying what to change.
-- Business data from the search: Overture Maps Foundation, from sources under CDLA Permissive 2.0, Apache 2.0 (Foursquare) and CC0. Each row's `placeId` (for example `overture:45ac34d4-...`) is the place's Overture ID.
+**Search mode and Google Maps.** The search looks up the place with OpenStreetMap's place search (Nominatim, with Photon as a backup), then reads that type of business from Google Maps: the same results list the Maps page shows, read through Apify's residential proxy.
+- **Coverage:** in a test search on 2026-11-01, 8 pages of Denver plumbers gave 160 businesses, and 19 of them listed no website on Google.
+- **Businesses with no website listed come back as leads** (`websiteStatus: "none"`), with their phone, rating and Google Maps link. Every other business gets its website audited. Closed businesses are left out.
+- **Order:** Google lists its most prominent businesses first, so a small `maxBusinesses` mostly gets established firms. Raise it to reach the long tail, where most businesses without websites are.
+- **If Google Maps doesn't answer,** the search runs on [Overture Maps](https://overturemaps.org) open data instead and the status message says so. There, only businesses that list a website are audited, and chains, closed places and places with little evidence they still exist are skipped.
+- **If neither can be read,** the run saves one uncharged note saying so instead of failing. Input it can't use (a type of business without a city, an unknown place) gets one uncharged `error` row saying what to change.
+- **Data:** Google Maps rows carry the listing's `mapsUrl`, `placeId`, `rating` and `reviewCount`. Overture rows: Overture Maps Foundation, from sources under CDLA Permissive 2.0, Apache 2.0 (Foursquare) and CC0, with `placeId` like `overture:45ac34d4-...`.
 
 **How it checks.** Two requests per site: `robots.txt` (which also tells whether HTTPS works) and the page itself. Full depth adds the contact page, and a dead listed link adds the homepage. There's no headless browser and no proxies. It uses an honest user agent, respects `robots.txt`, spaces requests to the same site at least a second apart, and audits businesses that share one website once. One bad site never stops the run, and when the run's time limit is close it stops starting new audits and finishes with the ones already done. A city search reads Overture Maps' data for the whole area, so it runs with 2 GB of memory (set automatically when you search; lists and datasets use 512 MB).
 

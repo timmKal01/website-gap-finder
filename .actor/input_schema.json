@@ -76,7 +76,7 @@
                 "Laundry and dry cleaning"
             ],
             "sectionCaption": "Search a city",
-            "sectionDescription": "Pick a type of business and a place. Gap Finder finds them in Overture Maps open data and audits every one that lists a website, in one run. Businesses with no website listed are left out. For businesses with no website at all, use a Google Maps scraper dataset below instead.",
+            "sectionDescription": "Pick a type of business and a place. Gap Finder finds them on Google Maps and, in one run, audits every one that lists a website. Businesses with no website listed come back as leads too. If Google Maps doesn't answer, the search uses Overture Maps open data instead.",
             "description": "What kind of local business to look for."
         },
         "searchLocation": {

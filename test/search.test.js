@@ -48,3 +48,20 @@ test('the 32 business types all map to Overture categories, and match on any lev
     assert.equal(categoryMatcher('plumber')(place), false);
     assert.equal(categoryMatcher('hair')({ basic_category: 'personal_or_beauty_service', taxonomy: { primary: 'barber' } }), true);
 });
+
+test('a Google Maps place becomes an item, with rating, reviews and the Maps link kept', async () => {
+    const { googlePlaceToItem } = await import('../src/sources/search.js');
+    const { GOOGLE_TERMS } = await import('../src/sources/googleMaps.js');
+    const item = googlePlaceToItem({
+        name: 'Big Dog Rooter', website: null, phone: '+17205550100', address: '1 Main St, Denver, CO 80202', locality: 'Denver, CO',
+        countryCode: 'US', categories: ['Plumber'], placeId: 'ChIJx', mapsUrl: 'https://www.google.com/maps?cid=1', rating: 4.3, reviewCount: 30, status: 'open',
+    }, { countryCode: 'US' });
+    const r = toBusinessRecord(item);
+    assert.equal(r.website, null); // a lead without a website, not skipped
+    assert.equal(r.city, 'Denver');
+    assert.equal(r.rating, 4.3);
+    assert.equal(r.reviewCount, 30);
+    assert.equal(r.mapsUrl, 'https://www.google.com/maps?cid=1');
+    assert.equal(r.placeId, 'ChIJx');
+    assert.deepEqual(Object.keys(GOOGLE_TERMS).sort(), Object.keys(CATEGORIES).sort());
+});

@@ -1,7 +1,8 @@
 // Where the businesses come from.
 //
 // Two modes, which can be combined:
-// - "search": find businesses of one type in a city in Overture Maps open data (search.js);
+// - "search": find businesses of one type in a city on Google Maps, or Overture Maps open data if Google doesn't
+//   answer (search.js);
 // - "enrich": audit businesses you already have, from another actor's dataset (e.g. a Google Maps
 //   scraper) and/or the manual `businesses` list.
 // Every source yields items that go through toBusinessRecord(), so main.js, the audit and the scoring
@@ -59,7 +60,7 @@ export async function* loadBusinesses({ datasetId, businesses, search }, counter
     }
 
     if (search) {
-        for await (const item of discoverBusinesses(search, counters.search)) yield* accept(item, 'overture');
+        for await (const item of discoverBusinesses(search, counters.search)) yield* accept(item, counters.search.source ?? 'overture');
     }
     if (datasetId) {
         log.info(`Reading businesses from dataset ${datasetId}`);

@@ -33,7 +33,7 @@ if (input.businesses !== undefined && input.businesses !== null && !Array.isArra
     await stopWithError('Input "businesses" must be an array of objects, e.g. [{ "name": "Joe\'s Barbers", "website": "joesbarbers.com" }].');
 }
 
-// Search mode: a business type plus a place, looked up in Overture Maps open data.
+// Search mode: a business type plus a place, looked up on Google Maps (Overture Maps open data if Google doesn't answer).
 const searchCategory = typeof input.searchCategory === 'string' ? input.searchCategory.trim() : '';
 const searchLocation = typeof input.searchLocation === 'string' ? input.searchLocation.trim() : '';
 if (Boolean(searchCategory) !== Boolean(searchLocation)) {
@@ -48,8 +48,8 @@ const search = searchCategory
     ? { category: searchCategory, location: searchLocation, maxBusinesses: Math.min(2000, Math.max(1, Number.isFinite(input.maxBusinesses) ? input.maxBusinesses : 100)) }
     : null;
 
-// A search reads Overture Maps' open data for the whole area (Denver's plumbers peaked at 589 MB locally, and bigger
-// cities read more). actor.json gives a search 2 GB by default; a run started with less gets a row saying so
+// A search that falls back to Overture Maps reads its open data for the whole area (Denver's plumbers peaked at 589 MB
+// locally, and bigger cities read more). actor.json gives a search 2 GB by default; a run started with less gets a row saying so
 // instead of being killed for running out of memory.
 const SEARCH_MEMORY_MBYTES = 2048;
 const memoryMbytes = Actor.getEnv().memoryMbytes;
@@ -260,12 +260,14 @@ log.info('Summary', {
     filteredOutBelowMinScore: stats.filteredOut,
     filteredOutUnaudited: stats.filteredOutUnaudited,
     skipped: { permanentlyClosed: counters.skippedClosed, empty: counters.skippedEmpty, duplicates: counters.duplicates, errors: stats.errors },
-    ...(search ? { search: { source: 'Overture Maps', place: counters.search.place, found: counters.search.found, noWebsiteListed: counters.search.noWebsiteListed, chains: counters.search.chains, overMaxBusinesses: counters.search.overLimit } } : {}),
+    ...(search ? { search: { source: counters.search.source === 'google_maps' ? 'Google Maps' : 'Overture Maps', fellBackFromGoogle: counters.search.fellBack ?? null, place: counters.search.place, found: counters.search.found, noWebsiteListed: counters.search.noWebsiteListed, chains: counters.search.chains, overMaxBusinesses: counters.search.overLimit } } : {}),
     stoppedBeforeTimeLimit: timeRanOut,
     billableEvents: stats.billable, // what was charged, once pricing is active
 });
 const searchNote = search
-    ? `Search: ${counters.search.found} found in Overture Maps, ${counters.search.noWebsiteListed} list no website, ${counters.search.chains} chains skipped. `
+    ? (counters.search.source === 'google_maps'
+        ? `Search: ${counters.search.found} found on Google Maps, ${counters.search.noWebsiteListed} with no website listed. `
+        : `Search: ${counters.search.found} found in Overture Maps${counters.search.fellBack ? " (Google Maps didn't answer)" : ''}, ${counters.search.noWebsiteListed} list no website, ${counters.search.chains} chains skipped. `)
     : '';
 await Actor.setStatusMessage(
     `${searchNote}Audited ${stats.processed} businesses: ${s.none} without a website, ${s.broken} broken, ${s.social_only} social only, `
