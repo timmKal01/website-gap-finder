@@ -63,7 +63,7 @@ Pay per event, only for the rows you receive. Compute and traffic are included.
 | Event | Price | Charged |
 |---|---|---|
 | Audited website | $0.003 | Per business whose website was fetched and audited, including sites found broken |
-| Lead without a website | $0.001 | Per business with nothing to fetch: no website, only a social or listing page, or a shut-down site builder |
+| Lead without a website | $0.001 (from 2026-11-15: $0.005) | Per business with nothing to fetch: no website, only a social or listing page, or a shut-down site builder |
 | Contacts extracted | $0.001 | Per business, only when `extractContacts` is on and a business email, phone or WhatsApp link was found |
 | Actor start | $0.00005 | Apify's standard fee, once per run (one per GB of memory: the default 512 MB counts as one, and a city search's 2 GB as two) |
 
@@ -78,6 +78,8 @@ Pay per event, only for the rows you receive. Compute and traffic are included.
 | **Total** | | | **$2.50** |
 
 Any 1,000-business run costs between $1 (no business has a website) and $4 (every one has a site and contact details).
+
+From 2026-11-15, a lead without a website costs $0.005, so the same example comes to $4.10, and a 1,000-business run costs $4 to $5.
 
 **Free:** the search itself, sites that block automated checks (saved with no score and a "Couldn't audit" note), and businesses left out by `onlyOpportunities`, `onlyNoWebsite` or the search, which are neither saved nor charged.
 
