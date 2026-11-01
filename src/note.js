@@ -19,6 +19,8 @@ export function emptyRunNote(stats, counters, options, search, categoryTitle) {
             reasons.push(s.source === 'google_maps'
                 ? `Google Maps lists no open ${what} in ${where}. Try a nearby bigger city or another type of business.`
                 : `Overture Maps lists no open ${what} in ${where}. Try a nearby bigger city, another type of business, or a Google Maps scraper dataset.`);
+        } else if (search.onlyNoWebsite && stats.pushed === 0 && s.source === 'google_maps') {
+            reasons.push(`Google Maps lists ${s.found} open ${what} in ${where}, and every one has a website, so there were no leads without one. Try a smaller town, a neighbourhood or another type of business.`);
         } else if (stats.processed === 0) {
             reasons.push(`Overture Maps lists ${s.found} ${what} in ${where}, but ${s.noWebsiteListed === 1 ? '1 lists' : `${s.noWebsiteListed} list`} no website`
                 + `${s.chains ? ` and ${s.chains === 1 ? '1 is a chain' : `${s.chains} are chains`}` : ''}, so there was no website to audit. A Google Maps scraper dataset`

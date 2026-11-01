@@ -12,6 +12,7 @@ const EXAMPLE_BUSINESSES = [
     { name: 'Example Plumbing Ltd', website: 'https://example.com', category: 'Plumber', city: 'Manchester', country: 'GB' },
 ];
 import { auditWebsite } from './audit/audit.js';
+import { hasRealWebsite } from './audit/classify.js';
 import { scoreBusiness } from './score.js';
 import { resolveCountry, countryFromHostname, toE164 } from './phone.js';
 
@@ -44,8 +45,11 @@ if (Boolean(searchCategory) !== Boolean(searchLocation)) {
 if (searchCategory && !CATEGORIES[searchCategory]) {
     await stopWithError(`Unknown business type "${searchCategory}". Use one of: ${Object.keys(CATEGORIES).join(', ')}.`);
 }
+// Only businesses with no real website (none, only a social or listing page, or a dead site builder): the leads a web
+// designer pitches first. A search reads deeper to find them; any other business is skipped before it's audited.
+const onlyNoWebsite = input.onlyNoWebsite === true;
 const search = searchCategory
-    ? { category: searchCategory, location: searchLocation, maxBusinesses: Math.min(2000, Math.max(1, Number.isFinite(input.maxBusinesses) ? input.maxBusinesses : 100)) }
+    ? { category: searchCategory, location: searchLocation, maxBusinesses: Math.min(2000, Math.max(1, Number.isFinite(input.maxBusinesses) ? input.maxBusinesses : 100)), onlyNoWebsite }
     : null;
 
 // A search that falls back to Overture Maps reads its open data for the whole area (Denver's plumbers peaked at 589 MB
@@ -85,7 +89,7 @@ log.info('Starting', { search, datasetId: datasetId || null, businesses: busines
 
 const counters = { skippedClosed: 0, skippedEmpty: 0, duplicates: 0, search: { found: 0, capped: false, chains: 0, noWebsiteListed: 0, overLimit: 0, place: null } };
 const stats = {
-    processed: 0, pushed: 0, filteredOut: 0, filteredOutUnaudited: 0, errors: 0, scored: 0, scoreSum: 0,
+    processed: 0, pushed: 0, filteredOut: 0, filteredOutUnaudited: 0, skippedHasWebsite: 0, errors: 0, scored: 0, scoreSum: 0,
     byStatus: { none: 0, ok: 0, broken: 0, social_only: 0, free_subdomain: 0, dead_builder: 0, blocked: 0 },
     billable: { [EVENTS.websiteAudited]: 0, [EVENTS.leadNoWebsite]: 0, [EVENTS.contactsExtracted]: 0 },
 };
@@ -102,6 +106,11 @@ function cachedAudit(business, country) {
 let stopped = false;
 
 async function processBusiness(business) {
+    // Not audited, saved or charged.
+    if (onlyNoWebsite && !business.websiteInvalid && hasRealWebsite(business.website)) {
+        stats.skippedHasWebsite++;
+        return;
+    }
     const websiteHost = business.website && !business.websiteInvalid ? new URL(business.website).hostname : null;
     const country = resolveCountry(business.countryRaw) ?? countryFromHostname(websiteHost);
     const audit = await cachedAudit(business, country);
@@ -259,7 +268,7 @@ log.info('Summary', {
     rowsPushed: stats.pushed,
     filteredOutBelowMinScore: stats.filteredOut,
     filteredOutUnaudited: stats.filteredOutUnaudited,
-    skipped: { permanentlyClosed: counters.skippedClosed, empty: counters.skippedEmpty, duplicates: counters.duplicates, errors: stats.errors },
+    skipped: { permanentlyClosed: counters.skippedClosed, empty: counters.skippedEmpty, duplicates: counters.duplicates, hasWebsite: stats.skippedHasWebsite, errors: stats.errors },
     ...(search ? { search: { source: counters.search.source === 'google_maps' ? 'Google Maps' : 'Overture Maps', fellBackFromGoogle: counters.search.fellBack ?? null, place: counters.search.place, found: counters.search.found, noWebsiteListed: counters.search.noWebsiteListed, chains: counters.search.chains, overMaxBusinesses: counters.search.overLimit } } : {}),
     stoppedBeforeTimeLimit: timeRanOut,
     billableEvents: stats.billable, // what was charged, once pricing is active

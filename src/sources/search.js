@@ -12,6 +12,7 @@ import { CATEGORIES, categoryMatcher, categoryLabel } from './categories.js';
 import { geocode, bboxSizeKm } from './geocode.js';
 import { latestPlacesRelease, findCandidates, readDetails } from './overture.js';
 import { GOOGLE_TERMS, GoogleMapsError, searchGoogleMaps } from './googleMaps.js';
+import { hasRealWebsite } from '../audit/classify.js';
 
 const MIN_CONFIDENCE = 0.5; // Overture's confidence that a place exists, 0-1
 const MAX_AREA_KM = 150; // wider than this would read most of a country's data
@@ -56,15 +57,27 @@ export function googlePlaceToItem(place, { countryCode }) {
     };
 }
 
-async function* fromGoogleMaps({ category, maxBusinesses }, place, counters) {
+// With onlyNoWebsite, Google lists established businesses (with websites) first, and in a test only about 1 in 8 Denver
+// plumbers had none, so the search reads up to 10 places per lead wanted.
+const NO_WEBSITE_READ_FACTOR = 10;
+
+async function* fromGoogleMaps({ category, maxBusinesses, onlyNoWebsite }, place, counters) {
     const proxyConfiguration = Actor.isAtHome() ? await Actor.createProxyConfiguration({ groups: ['RESIDENTIAL'], countryCode: 'US' }) : null;
     const g = {};
-    log.info(`Searching Google Maps for "${GOOGLE_TERMS[category]}" in ${place.name}`);
-    for await (const p of searchGoogleMaps({ term: GOOGLE_TERMS[category], bbox: place.bbox, countryCode: place.countryCode, maxPlaces: maxBusinesses, proxyConfiguration, counts: g })) {
+    const maxPlaces = onlyNoWebsite ? Math.min(1000, maxBusinesses * NO_WEBSITE_READ_FACTOR) : maxBusinesses;
+    let given = 0;
+    log.info(`Searching Google Maps for "${GOOGLE_TERMS[category]}" in ${place.name}${onlyNoWebsite ? ', keeping only businesses with no website' : ''}`);
+    for await (const p of searchGoogleMaps({ term: GOOGLE_TERMS[category], bbox: place.bbox, countryCode: place.countryCode, maxPlaces, proxyConfiguration, counts: g })) {
         if (p.status !== 'open') continue; // closed places aren't leads
         counters.found++;
-        if (!p.website) counters.noWebsiteListed++;
+        const real = hasRealWebsite(p.website);
+        if (!real) counters.noWebsiteListed++;
+        if (onlyNoWebsite && real) {
+            counters.withWebsite = (counters.withWebsite ?? 0) + 1;
+            continue;
+        }
         yield googlePlaceToItem(p, { countryCode: place.countryCode });
+        if (++given >= maxBusinesses) break;
     }
     log.info(`Google Maps: ${counters.found} open ${CATEGORIES[category].title.toLowerCase()} found, ${counters.noWebsiteListed} with no website listed`
         + ` (${g.pages} pages, ${g.outside} outside the area, ${g.retries} retries)`);
@@ -119,7 +132,7 @@ async function* fromOverture({ category, maxBusinesses }, place, counters) {
 
 /**
  * Businesses of one category in one place, as items for toBusinessRecord().
- * @param {{ category: string, location: string, maxBusinesses: number }} search
+ * @param {{ category: string, location: string, maxBusinesses: number, onlyNoWebsite?: boolean }} search
  * @param {{ found: number, chains: number, noWebsiteListed: number, overLimit: number, place: string|null, source?: string, fellBack?: string|null }} counters
  */
 export async function* discoverBusinesses(search, counters) {
@@ -144,6 +157,12 @@ export async function* discoverBusinesses(search, counters) {
     } catch (err) {
         // Google only fails a search that found nothing; then the whole search runs on Overture's open data.
         if (!(err instanceof GoogleMapsError) || counters.found > 0) throw err;
+        // Overture often just doesn't know a business's website, so it can't tell who has none.
+        if (search.onlyNoWebsite) {
+            err.sourceDown = true;
+            err.message = `${err.message}. A search for businesses with no website needs Google Maps, so nothing was searched`;
+            throw err;
+        }
         log.warning(`${err.message}. Searching Overture Maps instead.`);
         Object.assign(counters, { source: 'overture', fellBack: err.message, found: 0, noWebsiteListed: 0 });
     }

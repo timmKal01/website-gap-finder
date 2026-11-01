@@ -79,7 +79,7 @@ Pay per event, only for the rows you receive. Compute and traffic are included.
 
 Any 1,000-business run costs between $1 (no business has a website) and $4 (every one has a site and contact details).
 
-**Free:** the search itself, sites that block automated checks (saved with no score and a "Couldn't audit" note), and businesses left out by `onlyOpportunities` or by the search, which are neither saved nor charged.
+**Free:** the search itself, sites that block automated checks (saved with no score and a "Couldn't audit" note), and businesses left out by `onlyOpportunities`, `onlyNoWebsite` or the search, which are neither saved nor charged.
 
 ## Use cases
 
@@ -98,6 +98,7 @@ Any 1,000-business run costs between $1 (no business has a website) and $4 (ever
 | `businesses` | array | Your own list: `name`, `website`, and optionally `phone`, `address`, `city`, `country` (name or 2-letter code) and `category`. |
 | `auditDepth` | `basic` / `full` | Basic checks the homepage. Full also opens the contact page when one is linked. Default `basic`. |
 | `extractContacts` | boolean | Pull the public business email, phone and WhatsApp link from the site. Default `false`. |
+| `onlyNoWebsite` | boolean | Only businesses with no real website: none, only a social or listing page, or a dead site builder. A search reads up to 10 Google Maps listings per lead wanted, and businesses with a website are skipped, not charged. Default `false`. |
 | `onlyOpportunities` | boolean | Only save businesses scoring at least `minScore`. Sites that couldn't be audited are left out too. Default `false`. |
 | `minScore` | integer 0-100 | Default `50`. |
 | `maxConcurrency` | integer | Businesses audited at once. Default `10`. |

@@ -94,6 +94,13 @@
             "maximum": 2000,
             "description": "The most businesses the search will audit. Each one is charged, so this also caps the cost of the run."
         },
+        "onlyNoWebsite": {
+            "title": "Only businesses with no website",
+            "type": "boolean",
+            "editor": "checkbox",
+            "default": false,
+            "description": "Return only businesses with no real website: none at all, only a Facebook, Instagram or listing page, or a shut-down site builder. A search then reads up to 10 Google Maps listings per lead you ask for (maxBusinesses), since most businesses Google lists first have a website. Businesses with a website are skipped and not charged. Each lead is $0.001."
+        },
         "datasetId": {
             "title": "Dataset ID (e.g. from a Google Maps scraper)",
             "type": "string",

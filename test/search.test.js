@@ -65,3 +65,11 @@ test('a Google Maps place becomes an item, with rating, reviews and the Maps lin
     assert.equal(r.placeId, 'ChIJx');
     assert.deepEqual(Object.keys(GOOGLE_TERMS).sort(), Object.keys(CATEGORIES).sort());
 });
+
+test('only a site of the business\'s own counts as a real website', async () => {
+    const { hasRealWebsite } = await import('../src/audit/classify.js');
+    assert.equal(hasRealWebsite(null), false);
+    assert.equal(hasRealWebsite('https://www.facebook.com/bigdogrooter'), false);
+    assert.equal(hasRealWebsite('https://www.instagram.com/example'), false);
+    assert.equal(hasRealWebsite('https://bigdogrooter.com/'), true);
+});

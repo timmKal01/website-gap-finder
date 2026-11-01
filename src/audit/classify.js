@@ -129,3 +129,8 @@ export function sameSite(a, b) {
     const db = getDomain(hostOf(b) ?? '');
     return Boolean(da && da === db);
 }
+
+/** A website that is a real site of the business's own, not missing, a social or listing page, or a dead builder. */
+export function hasRealWebsite(url) {
+    return Boolean(url) && !profilePlatform(url) && !deadBuilderFromHost(url);
+}
