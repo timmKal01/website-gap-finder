@@ -79,11 +79,23 @@
             "sectionDescription": "Pick a type of business and a place. Gap Finder finds them on Google Maps and, in one run, audits every one that lists a website. Businesses with no website listed come back as leads too. If Google Maps doesn't answer, the search uses Overture Maps open data instead.",
             "description": "What kind of local business to look for."
         },
+        "searchTerm": {
+            "title": "Or type any business",
+            "type": "string",
+            "editor": "textfield",
+            "description": "Search Google Maps for any kind of business instead, e.g. \"yoga studio\", \"pet groomer\" or \"wedding photographer\". Used in place of Type of business when filled in. A typed search uses Google Maps only."
+        },
         "searchLocation": {
             "title": "City or area to search",
             "type": "string",
             "editor": "textfield",
             "description": "A city, town or district, e.g. \"Denver, USA\", \"Manchester, UK\" or \"Westlands, Nairobi\". Add the country when the name is common."
+        },
+        "searchLocations": {
+            "title": "More cities or areas",
+            "type": "array",
+            "editor": "stringList",
+            "description": "Search several places in one run, e.g. \"Aurora, USA\" and \"Boulder, USA\", up to 25. Each place gets up to Max businesses. A business found in two places is kept once. A place that can't be found gets its own uncharged row, and the rest still run."
         },
         "maxBusinesses": {
             "title": "Max businesses from the search",
@@ -92,7 +104,7 @@
             "default": 100,
             "minimum": 1,
             "maximum": 2000,
-            "description": "The most businesses the search will audit. Each one is charged, so this also caps the cost of the run."
+            "description": "The most businesses the search will audit in each city or area. Each one is charged, so this also caps the cost of the run."
         },
         "onlyNoWebsite": {
             "title": "Only businesses with no website",

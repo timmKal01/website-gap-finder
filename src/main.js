@@ -35,21 +35,41 @@ if (input.businesses !== undefined && input.businesses !== null && !Array.isArra
 }
 
 // Search mode: a business type plus a place, looked up on Google Maps (Overture Maps open data if Google doesn't answer).
+// Since 2026-11-05 a search can also be any typed business ("yoga studio"), and cover several places.
+const MAX_SEARCH_PLACES = 25;
 const searchCategory = typeof input.searchCategory === 'string' ? input.searchCategory.trim() : '';
+const searchTerm = typeof input.searchTerm === 'string' ? input.searchTerm.trim().replace(/\s+/g, ' ') : '';
 const searchLocation = typeof input.searchLocation === 'string' ? input.searchLocation.trim() : '';
-if (Boolean(searchCategory) !== Boolean(searchLocation)) {
-    await stopWithError(searchCategory
+const searchPlaces = [searchLocation, ...(Array.isArray(input.searchLocations) ? input.searchLocations : [])]
+    .map((p) => (typeof p === 'string' ? p.trim() : ''))
+    .filter((p, i, all) => p && all.findIndex((q) => q.toLowerCase() === p.toLowerCase()) === i);
+const searchType = searchTerm || searchCategory;
+if (Boolean(searchType) !== Boolean(searchPlaces.length)) {
+    await stopWithError(searchType
         ? 'Add a "City or area to search" for the search, e.g. "Denver, USA".'
-        : 'Pick a "Type of business" for the search, e.g. Plumbers.');
+        : 'Pick a "Type of business" for the search, e.g. Plumbers, or type one, e.g. "yoga studio".');
 }
-if (searchCategory && !CATEGORIES[searchCategory]) {
-    await stopWithError(`Unknown business type "${searchCategory}". Use one of: ${Object.keys(CATEGORIES).join(', ')}.`);
+if (searchTerm && searchTerm.length > 80) {
+    await stopWithError(`"${searchTerm.slice(0, 40)}..." is too long for a business type. Use a few words, e.g. "yoga studio".`);
+}
+if (!searchTerm && searchCategory && !CATEGORIES[searchCategory]) {
+    await stopWithError(`Unknown business type "${searchCategory}". Use one of: ${Object.keys(CATEGORIES).join(', ')}, or type any business in "Or type any business".`);
+}
+if (searchPlaces.length > MAX_SEARCH_PLACES) {
+    await stopWithError(`${searchPlaces.length} places is more than one run searches (${MAX_SEARCH_PLACES}). Split them across runs.`);
 }
 // Only businesses with no real website (none, only a social or listing page, or a dead site builder): the leads a web
 // designer pitches first. A search reads deeper to find them; any other business is skipped before it's audited.
 const onlyNoWebsite = input.onlyNoWebsite === true;
-const search = searchCategory
-    ? { category: searchCategory, location: searchLocation, maxBusinesses: Math.min(2000, Math.max(1, Number.isFinite(input.maxBusinesses) ? input.maxBusinesses : 100)), onlyNoWebsite }
+const search = searchType
+    ? {
+        category: searchTerm ? null : searchCategory,
+        term: searchTerm || null,
+        location: searchPlaces.join('; '),
+        locations: searchPlaces,
+        maxBusinesses: Math.min(2000, Math.max(1, Number.isFinite(input.maxBusinesses) ? input.maxBusinesses : 100)),
+        onlyNoWebsite,
+    }
     : null;
 
 // A search that falls back to Overture Maps reads its open data for the whole area (Denver's plumbers peaked at 589 MB
@@ -247,7 +267,7 @@ if (timeRanOut) log.warning(`Stopped starting new audits ${DEADLINE_MARGIN_MS / 
 
 // Never end with an empty dataset: say why nothing was saved, in one uncharged row.
 if (stats.pushed === 0 && !sourceProblem) {
-    const note = emptyRunNote(stats, counters, options, search, search ? CATEGORIES[search.category].title : undefined);
+    const note = emptyRunNote(stats, counters, options, search, search ? (search.term ?? CATEGORIES[search.category].title) : undefined);
     if (timeRanOut) note.note = "The run's time limit was reached before any business was audited. Run again with a longer time limit.";
     await Actor.pushData(note);
     log.info(`No businesses saved: ${note.note}`);
@@ -273,7 +293,8 @@ log.info('Summary', {
     stoppedBeforeTimeLimit: timeRanOut,
     billableEvents: stats.billable, // what was charged, once pricing is active
 });
-const searchNote = search
+// No source means no place could be searched at all; the error row already says why.
+const searchNote = search && counters.search.source
     ? (counters.search.source === 'google_maps'
         ? `Search: ${counters.search.found} found on Google Maps, ${counters.search.noWebsiteListed} with no website listed. `
         : `Search: ${counters.search.found} found in Overture Maps${counters.search.fellBack ? " (Google Maps didn't answer)" : ''}, ${counters.search.noWebsiteListed} list no website, ${counters.search.chains} chains skipped. `)

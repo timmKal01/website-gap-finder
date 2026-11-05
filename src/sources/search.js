@@ -7,6 +7,9 @@
 // Overture often just lacks a website it doesn't know about, and closed places, unlikely places and chains are skipped.
 //
 // Until 2026-10-29 this used OpenStreetMap's Overpass servers, which were down all of 2026-10-28 and failed real runs.
+//
+// Since 2026-11-05 a search can name any business ("yoga studio") instead of one of the 32 types, and cover several
+// places. A typed search has no Overture fallback, since Overture's categories can't be matched to free text.
 import { Actor, log } from 'apify';
 import { CATEGORIES, categoryMatcher, categoryLabel } from './categories.js';
 import { geocode, bboxSizeKm } from './geocode.js';
@@ -61,13 +64,17 @@ export function googlePlaceToItem(place, { countryCode }) {
 // plumbers had none, so the search reads up to 10 places per lead wanted.
 const NO_WEBSITE_READ_FACTOR = 10;
 
-async function* fromGoogleMaps({ category, maxBusinesses, onlyNoWebsite }, place, counters) {
+/** What the search looks for, as people say it: the typed term, or the business type's name. */
+export const searchLabel = ({ term, category }) => term ?? CATEGORIES[category].title.toLowerCase();
+
+async function* fromGoogleMaps({ category, term, maxBusinesses, onlyNoWebsite }, place, counters) {
     const proxyConfiguration = Actor.isAtHome() ? await Actor.createProxyConfiguration({ groups: ['RESIDENTIAL'], countryCode: 'US' }) : null;
     const g = {};
     const maxPlaces = onlyNoWebsite ? Math.min(1000, maxBusinesses * NO_WEBSITE_READ_FACTOR) : maxBusinesses;
+    const query = term ?? GOOGLE_TERMS[category];
     let given = 0;
-    log.info(`Searching Google Maps for "${GOOGLE_TERMS[category]}" in ${place.name}${onlyNoWebsite ? ', keeping only businesses with no website' : ''}`);
-    for await (const p of searchGoogleMaps({ term: GOOGLE_TERMS[category], bbox: place.bbox, countryCode: place.countryCode, maxPlaces, proxyConfiguration, counts: g })) {
+    log.info(`Searching Google Maps for "${query}" in ${place.name}${onlyNoWebsite ? ', keeping only businesses with no website' : ''}`);
+    for await (const p of searchGoogleMaps({ term: query, bbox: place.bbox, countryCode: place.countryCode, maxPlaces, proxyConfiguration, counts: g })) {
         if (p.status !== 'open') continue; // closed places aren't leads
         counters.found++;
         const real = hasRealWebsite(p.website);
@@ -79,7 +86,7 @@ async function* fromGoogleMaps({ category, maxBusinesses, onlyNoWebsite }, place
         yield googlePlaceToItem(p, { countryCode: place.countryCode });
         if (++given >= maxBusinesses) break;
     }
-    log.info(`Google Maps: ${counters.found} open ${CATEGORIES[category].title.toLowerCase()} found, ${counters.noWebsiteListed} with no website listed`
+    log.info(`Google Maps: ${counters.found} open ${searchLabel({ term, category })} found in ${place.name}, ${counters.noWebsiteListed} with no website listed`
         + ` (${g.pages} pages, ${g.outside} outside the area, ${g.retries} retries)`);
 }
 
@@ -130,26 +137,25 @@ async function* fromOverture({ category, maxBusinesses }, place, counters) {
     }
 }
 
-/**
- * Businesses of one category in one place, as items for toBusinessRecord().
- * @param {{ category: string, location: string, maxBusinesses: number, onlyNoWebsite?: boolean }} search
- * @param {{ found: number, chains: number, noWebsiteListed: number, overLimit: number, place: string|null, source?: string, fellBack?: string|null }} counters
- */
-export async function* discoverBusinesses(search, counters) {
+/** One place name -> its geocoded area, or an error saying why it can't be searched. */
+async function findPlace(location) {
     let place;
     try {
-        place = await geocode(search.location);
+        place = await geocode(location);
     } catch (err) {
         err.sourceDown = true;
         throw err;
     }
-    if (!place) throw new SearchInputError(`Couldn't find a place called "${search.location}". Try adding the country, e.g. "Denver, USA".`);
+    if (!place) throw new SearchInputError(`Couldn't find a place called "${location}". Try adding the country, e.g. "Denver, USA".`);
     const { widthKm, heightKm } = bboxSizeKm(place.bbox);
     if (widthKm > MAX_AREA_KM || heightKm > MAX_AREA_KM) {
         throw new SearchInputError(`"${place.name}" covers about ${Math.round(widthKm)} x ${Math.round(heightKm)} km. Search a city, town or district (up to ${MAX_AREA_KM} km across) instead.`);
     }
-    counters.place = place.name;
+    return place;
+}
 
+/** One place: Google Maps, or Overture Maps open data if Google doesn't answer (only for the 32 business types). */
+async function* searchPlace(search, place, counters) {
     counters.source = 'google_maps';
     try {
         yield* fromGoogleMaps(search, place, counters);
@@ -157,14 +163,69 @@ export async function* discoverBusinesses(search, counters) {
     } catch (err) {
         // Google only fails a search that found nothing; then the whole search runs on Overture's open data.
         if (!(err instanceof GoogleMapsError) || counters.found > 0) throw err;
-        // Overture often just doesn't know a business's website, so it can't tell who has none.
-        if (search.onlyNoWebsite) {
+        // Overture often just doesn't know a business's website, so it can't tell who has none, and its categories
+        // can't be matched to a typed search.
+        if (search.onlyNoWebsite || !search.category) {
             err.sourceDown = true;
-            err.message = `${err.message}. A search for businesses with no website needs Google Maps, so nothing was searched`;
+            err.message = `${err.message}. ${search.onlyNoWebsite ? 'A search for businesses with no website' : 'A search for a typed business'} needs Google Maps, so nothing was searched`;
             throw err;
         }
         log.warning(`${err.message}. Searching Overture Maps instead.`);
         Object.assign(counters, { source: 'overture', fellBack: err.message, found: 0, noWebsiteListed: 0 });
     }
     yield* fromOverture(search, place, counters);
+}
+
+/** One uncharged row for a place that couldn't be searched, when other places in the run could be. */
+async function reportPlaceProblem({ location, err }) {
+    await Actor.pushData(err.sourceDown
+        ? { rowType: 'note', name: `Couldn't search "${location}" (not charged)`, note: `${err.message}. The other places were searched.`, auditedAt: new Date().toISOString() }
+        : { rowType: 'error', name: `Couldn't search "${location}" (not charged)`, error: err.message, auditedAt: new Date().toISOString() });
+}
+
+const SUMMED = ['found', 'chains', 'noWebsiteListed', 'overLimit', 'withWebsite'];
+
+/**
+ * Businesses of one type (or a typed term) in one or more places, as items for toBusinessRecord().
+ * Each place is searched on its own with its own maxBusinesses, and `counters` gets the totals.
+ * @param {{ category: string|null, term?: string|null, location: string, locations?: string[], maxBusinesses: number, onlyNoWebsite?: boolean }} search
+ * @param {{ found: number, chains: number, noWebsiteListed: number, overLimit: number, place: string|null, source?: string, fellBack?: string|null }} counters
+ */
+export async function* discoverBusinesses(search, counters) {
+    const locations = search.locations?.length ? search.locations : [search.location];
+    const names = [];
+    const waiting = []; // places that failed before any place could be searched
+    const sources = new Set();
+    let searched = 0;
+    for (const location of locations) {
+        const one = { found: 0, chains: 0, noWebsiteListed: 0, overLimit: 0, place: null };
+        try {
+            const place = await findPlace(location);
+            names.push(place.name);
+            counters.place = names.join('; ');
+            searched++;
+            for (const problem of waiting.splice(0)) await reportPlaceProblem(problem);
+            const tracked = searchPlace(search, place, one);
+            for await (const item of tracked) {
+                counters.source = one.source;
+                yield item;
+            }
+        } catch (err) {
+            // A one-place search fails as it always has: one row from main.js saying why.
+            if (locations.length === 1) throw err;
+            log.warning(`"${location}": ${err.message}`);
+            if (searched) await reportPlaceProblem({ location, err });
+            else waiting.push({ location, err });
+        } finally {
+            for (const k of SUMMED) if (one[k]) counters[k] = (counters[k] ?? 0) + one[k];
+            if (one.source) sources.add(one.source);
+            if (one.fellBack) counters.fellBack = [counters.fellBack, `${one.place}: ${one.fellBack}`].filter(Boolean).join('; ');
+            counters.source = sources.has('google_maps') ? 'google_maps' : [...sources][0] ?? counters.source;
+        }
+    }
+    if (!searched && waiting.length) {
+        const first = waiting[0].err;
+        first.message = `None of the ${waiting.length} places could be searched. ${waiting.map(({ location, err }) => `"${location}": ${err.message}`).join(' ')}`;
+        throw first;
+    }
 }

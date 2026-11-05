@@ -94,8 +94,10 @@ From 2026-11-15, a lead without a website costs $0.005, so the same example come
 | Field | Type | Description |
 |---|---|---|
 | `searchCategory` | select | Type of business to search for: plumbers, electricians, HVAC, roofers, carpenters, painters, hair salons and barbers, beauty and nail salons, massage and spas, tattoo studios, dentists, doctors and clinics, physiotherapists, vets, opticians, gyms, restaurants, cafes, bakeries, hotels, car repair, car dealers, lawyers, accountants, real estate agents, florists, clothing and furniture stores, photographers, driving schools, childcare and laundries. |
-| `searchLocation` | string | City or area to search, e.g. "Manchester, UK" or "Westlands, Nairobi". Used with `searchCategory`. |
-| `maxBusinesses` | integer | The most businesses the search audits, which also caps its cost. Default `100`, up to `2000`. |
+| `searchTerm` | string | Or search Google Maps for any business instead, e.g. "yoga studio", "pet groomer" or "wedding photographer". Used in place of `searchCategory` when filled in. A typed search uses Google Maps only. |
+| `searchLocation` | string | City or area to search, e.g. "Manchester, UK" or "Westlands, Nairobi". Used with `searchCategory` or `searchTerm`. |
+| `searchLocations` | array | More places to search in the same run, up to 25 in all. A business found in two places is kept once, and a place that can't be found gets its own uncharged row while the rest still run. |
+| `maxBusinesses` | integer | The most businesses the search audits in each place, which also caps its cost. Default `100`, up to `2000`. |
 | `datasetId` | string | ID of a dataset from another actor, such as a Google Maps scraper run. Field names are mapped automatically: `title`/`name`, `website`/`url`, `phone`, `address`, `city`, `countryCode`, `categoryName`, `totalScore`/`rating`, `reviewsCount`, and the Google Maps `url`. Permanently closed places and duplicates are skipped. |
 | `businesses` | array | Your own list: `name`, `website`, and optionally `phone`, `address`, `city`, `country` (name or 2-letter code) and `category`. |
 | `auditDepth` | `basic` / `full` | Basic checks the homepage. Full also opens the contact page when one is linked. Default `basic`. |
@@ -116,6 +118,18 @@ Search a city:
   "maxBusinesses": 100,
   "onlyOpportunities": true,
   "minScore": 50
+}
+```
+
+Search any business, in several towns at once:
+
+```json
+{
+  "searchTerm": "yoga studio",
+  "searchLocation": "Boulder, USA",
+  "searchLocations": ["Fort Collins, USA", "Denver, USA"],
+  "maxBusinesses": 50,
+  "onlyNoWebsite": true
 }
 ```
 
