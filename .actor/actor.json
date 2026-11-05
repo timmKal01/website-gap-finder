@@ -2,7 +2,7 @@
     "actorSpecification": 1,
     "name": "website-gap-finder",
     "title": "Website Gap Finder: Businesses Without Websites + Audit",
-    "description": "Web design leads and no-website leads: find businesses without websites on Google Maps, or with broken, outdated or insecure ones. Search any city by type of business, or use your own list or dataset. Each business gets a website audit, a 0-100 lead score and a pitch line. Any country.",
+    "description": "Web design leads and no-website leads: find businesses without websites on Google Maps, or with broken or outdated ones. Search any business type in up to 25 cities per run, or audit your own list. Each gets a website audit, a 0-100 lead score and a pitch line. Weekly runs return only new leads.",
     "version": "0.1",
     "meta": {
         "templateId": "custom-no-proxy"
