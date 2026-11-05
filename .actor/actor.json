@@ -13,7 +13,7 @@
     "storages": {
         "dataset": "./dataset_schema.json"
     },
-    "defaultMemoryMbytes": "get(input, 'searchLocation.length', 0) > 0 ? 2048 : 512",
+    "defaultMemoryMbytes": "get(input, 'searchLocation.length', 0) + get(input, 'searchLocations.length', 0) > 0 ? 2048 : 512",
     "minMemoryMbytes": 256,
     "maxMemoryMbytes": 4096
 }
