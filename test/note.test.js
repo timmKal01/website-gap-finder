@@ -37,3 +37,13 @@ test('a dataset whose records were all skipped lists the reasons', () => {
 test('the note row is never empty', () => {
     assert.ok(emptyRunNote(stats(), counters(), opts(), null).note.length > 0);
 });
+
+test('with only new businesses on, a search whose finds were all returned before says there is nothing new yet', () => {
+    const n = emptyRunNote(stats({ pushed: 0 }), counters({ found: 12, seen: 12, source: 'google_maps' }), opts(), { ...search, onlyNew: true }, 'Plumbers');
+    assert.match(n.note, /All 12 plumbers the search found in Denver, Colorado, United States were returned by earlier runs/);
+});
+
+test('with only new businesses on, a list whose businesses were all returned before says so', () => {
+    const n = emptyRunNote(stats({ skippedSeen: 3 }), counters(), opts(), null);
+    assert.match(n.note, /All 3 businesses were returned by earlier runs/);
+});

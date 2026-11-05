@@ -13,6 +13,11 @@ import { discoverBusinesses } from './search.js';
 
 const PAGE_SIZE = 1000;
 
+/** One key per business: its Google place ID, or else its name and address (or website). */
+export function businessKey(record) {
+    return record.placeId ?? `${record.name ?? ''}|${record.address ?? record.website ?? ''}`.toLowerCase();
+}
+
 /** Items of an Apify dataset, page by page, so large datasets never sit in memory at once. */
 async function* datasetItems(datasetId) {
     const client = Actor.apifyClient.dataset(datasetId);
@@ -50,7 +55,7 @@ export async function* loadBusinesses({ datasetId, businesses, search }, counter
             counters.skippedClosed++;
             return;
         }
-        const key = record.placeId ?? `${record.name ?? ''}|${record.address ?? record.website ?? ''}`.toLowerCase();
+        const key = businessKey(record);
         if (seen.has(key)) {
             counters.duplicates++;
             return;

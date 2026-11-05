@@ -14,6 +14,11 @@ export const EVENTS = {
     contactsExtracted: 'contacts-extracted', // extractContacts is on and the site listed an email, phone or WhatsApp
 };
 
+// onlyNew: the businesses earlier runs returned, kept in the buyer's own named key-value store (2026-11-05).
+export const SEEN_STORE = 'website-gap-finder-seen';
+export const SEEN_KEY = 'business-keys';
+export const SEEN_LIMIT = 50_000;
+
 export const HTTP = {
     timeoutMs: 15_000,
     slowRetryTimeoutMs: 45_000, // a page that timed out gets one retry with this much time (some sites take 30s+)

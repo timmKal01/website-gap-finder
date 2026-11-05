@@ -67,10 +67,14 @@ const NO_WEBSITE_READ_FACTOR = 10;
 /** What the search looks for, as people say it: the typed term, or the business type's name. */
 export const searchLabel = ({ term, category }) => term ?? CATEGORIES[category].title.toLowerCase();
 
-async function* fromGoogleMaps({ category, term, maxBusinesses, onlyNoWebsite }, place, counters) {
+// With onlyNew, a search reads past the businesses earlier runs returned, up to this many more.
+const SEEN_EXTRA_READ = 500;
+
+async function* fromGoogleMaps({ category, term, maxBusinesses, onlyNoWebsite, isSeen, seenCount = 0 }, place, counters) {
     const proxyConfiguration = Actor.isAtHome() ? await Actor.createProxyConfiguration({ groups: ['RESIDENTIAL'], countryCode: 'US' }) : null;
     const g = {};
-    const maxPlaces = onlyNoWebsite ? Math.min(1000, maxBusinesses * NO_WEBSITE_READ_FACTOR) : maxBusinesses;
+    const wanted = onlyNoWebsite ? maxBusinesses * NO_WEBSITE_READ_FACTOR : maxBusinesses;
+    const maxPlaces = Math.min(1000, wanted + (isSeen ? Math.min(seenCount, SEEN_EXTRA_READ) : 0));
     const query = term ?? GOOGLE_TERMS[category];
     let given = 0;
     log.info(`Searching Google Maps for "${query}" in ${place.name}${onlyNoWebsite ? ', keeping only businesses with no website' : ''}`);
@@ -83,14 +87,19 @@ async function* fromGoogleMaps({ category, term, maxBusinesses, onlyNoWebsite },
             counters.withWebsite = (counters.withWebsite ?? 0) + 1;
             continue;
         }
-        yield googlePlaceToItem(p, { countryCode: place.countryCode });
+        const item = googlePlaceToItem(p, { countryCode: place.countryCode });
+        if (isSeen?.(item)) {
+            counters.seen = (counters.seen ?? 0) + 1;
+            continue;
+        }
+        yield item;
         if (++given >= maxBusinesses) break;
     }
     log.info(`Google Maps: ${counters.found} open ${searchLabel({ term, category })} found in ${place.name}, ${counters.noWebsiteListed} with no website listed`
         + ` (${g.pages} pages, ${g.outside} outside the area, ${g.retries} retries)`);
 }
 
-async function* fromOverture({ category, maxBusinesses }, place, counters) {
+async function* fromOverture({ category, maxBusinesses, isSeen }, place, counters) {
     const matches = categoryMatcher(category);
     let candidates;
     try {
@@ -109,6 +118,10 @@ async function* fromOverture({ category, maxBusinesses }, place, counters) {
                 }
                 if (!hasWebsite(p)) {
                     counters.noWebsiteListed++;
+                    return false;
+                }
+                if (isSeen?.({ placeId: p.id ? `overture:${p.id}` : null })) {
+                    counters.seen = (counters.seen ?? 0) + 1;
                     return false;
                 }
                 return true;
@@ -183,7 +196,7 @@ async function reportPlaceProblem({ location, err }) {
         : { rowType: 'error', name: `Couldn't search "${location}" (not charged)`, error: err.message, auditedAt: new Date().toISOString() });
 }
 
-const SUMMED = ['found', 'chains', 'noWebsiteListed', 'overLimit', 'withWebsite'];
+const SUMMED = ['found', 'chains', 'noWebsiteListed', 'overLimit', 'withWebsite', 'seen'];
 
 /**
  * Businesses of one type (or a typed term) in one or more places, as items for toBusinessRecord().
@@ -198,7 +211,7 @@ export async function* discoverBusinesses(search, counters) {
     const sources = new Set();
     let searched = 0;
     for (const location of locations) {
-        const one = { found: 0, chains: 0, noWebsiteListed: 0, overLimit: 0, place: null };
+        const one = { found: 0, chains: 0, noWebsiteListed: 0, overLimit: 0, seen: 0, place: null };
         try {
             const place = await findPlace(location);
             names.push(place.name);

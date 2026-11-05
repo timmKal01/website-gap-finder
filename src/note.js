@@ -15,7 +15,9 @@ export function emptyRunNote(stats, counters, options, search, categoryTitle) {
         const what = (categoryTitle ?? search.category).toLowerCase();
         const where = counters.search.place ?? search.location;
         const s = counters.search;
-        if (s.found === 0) {
+        if (search.onlyNew && s.seen > 0 && stats.pushed === 0) {
+            reasons.push(`All ${s.seen} ${what} the search found in ${where} were returned by earlier runs (only new businesses is on), so there's nothing new yet. Run again later, or search another place.`);
+        } else if (s.found === 0) {
             reasons.push(s.source === 'google_maps'
                 ? `Google Maps lists no open ${what} in ${where}. Try a nearby bigger city or another type of business.`
                 : `Overture Maps lists no open ${what} in ${where}. Try a nearby bigger city, another type of business, or a Google Maps scraper dataset.`);
@@ -32,6 +34,9 @@ export function emptyRunNote(stats, counters, options, search, categoryTitle) {
             + ' so none were saved (filtered businesses aren\'t charged). Lower minScore or turn off onlyOpportunities to see them.');
     }
     const skipped = counters.skippedClosed + counters.skippedEmpty + counters.duplicates;
+    if (!search && stats.processed === 0 && stats.skippedSeen > 0) {
+        reasons.push(`All ${stats.skippedSeen} businesses were returned by earlier runs (only new businesses is on), so there's nothing new.`);
+    }
     if (!search && stats.processed === 0 && skipped > 0) {
         reasons.push(`Every input record was skipped: ${counters.skippedClosed} permanently closed, ${counters.skippedEmpty} with no name or website, ${counters.duplicates} duplicates.`);
     }

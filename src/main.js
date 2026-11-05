@@ -1,6 +1,6 @@
 import { Actor, log } from 'apify';
-import { EVENTS } from './config.js';
-import { loadBusinesses } from './sources/index.js';
+import { EVENTS, SEEN_STORE, SEEN_KEY, SEEN_LIMIT } from './config.js';
+import { loadBusinesses, businessKey } from './sources/index.js';
 import { CATEGORIES } from './sources/categories.js';
 import { emptyRunNote } from './note.js';
 
@@ -61,6 +61,14 @@ if (searchPlaces.length > MAX_SEARCH_PLACES) {
 // Only businesses with no real website (none, only a social or listing page, or a dead site builder): the leads a web
 // designer pitches first. A search reads deeper to find them; any other business is skipped before it's audited.
 const onlyNoWebsite = input.onlyNoWebsite === true;
+
+// For scheduled runs: businesses earlier runs returned are skipped (not audited or charged), so each run brings only new
+// ones. The keys live in the buyer's own named key-value store, so they survive between runs (2026-11-05).
+const onlyNew = input.onlyNew === true;
+const seenStore = onlyNew ? await Actor.openKeyValueStore(SEEN_STORE) : null;
+const seenBefore = new Set(seenStore ? (await seenStore.getValue(SEEN_KEY)) ?? [] : []);
+const isSeen = onlyNew ? (item) => seenBefore.has(businessKey(item)) : null;
+const deliveredKeys = [];
 const search = searchType
     ? {
         category: searchTerm ? null : searchCategory,
@@ -69,6 +77,9 @@ const search = searchType
         locations: searchPlaces,
         maxBusinesses: Math.min(2000, Math.max(1, Number.isFinite(input.maxBusinesses) ? input.maxBusinesses : 100)),
         onlyNoWebsite,
+        onlyNew,
+        isSeen,
+        seenCount: seenBefore.size,
     }
     : null;
 
@@ -105,11 +116,12 @@ const options = {
     minScore: Math.min(100, Math.max(0, Number.isFinite(input.minScore) ? input.minScore : 50)),
     maxConcurrency: Math.min(50, Math.max(1, Number.isFinite(input.maxConcurrency) ? input.maxConcurrency : 10)),
 };
-log.info('Starting', { search, datasetId: datasetId || null, businesses: businesses.length, ...options });
+log.info('Starting', { search: search && { ...search, isSeen: undefined }, datasetId: datasetId || null, businesses: businesses.length, onlyNew, ...options });
+if (onlyNew) log.info(`Only new businesses: ${seenBefore.size} returned by earlier runs will be skipped`);
 
 const counters = { skippedClosed: 0, skippedEmpty: 0, duplicates: 0, search: { found: 0, capped: false, chains: 0, noWebsiteListed: 0, overLimit: 0, place: null } };
 const stats = {
-    processed: 0, pushed: 0, filteredOut: 0, filteredOutUnaudited: 0, skippedHasWebsite: 0, errors: 0, scored: 0, scoreSum: 0,
+    processed: 0, pushed: 0, filteredOut: 0, filteredOutUnaudited: 0, skippedHasWebsite: 0, skippedSeen: 0, errors: 0, scored: 0, scoreSum: 0,
     byStatus: { none: 0, ok: 0, broken: 0, social_only: 0, free_subdomain: 0, dead_builder: 0, blocked: 0 },
     billable: { [EVENTS.websiteAudited]: 0, [EVENTS.leadNoWebsite]: 0, [EVENTS.contactsExtracted]: 0 },
 };
@@ -129,6 +141,11 @@ async function processBusiness(business) {
     // Not audited, saved or charged.
     if (onlyNoWebsite && !business.websiteInvalid && hasRealWebsite(business.website)) {
         stats.skippedHasWebsite++;
+        return;
+    }
+    // Searches skip these before they're counted; a dataset or list is checked here.
+    if (isSeen?.(business)) {
+        stats.skippedSeen++;
         return;
     }
     const websiteHost = business.website && !business.websiteInvalid ? new URL(business.website).hostname : null;
@@ -196,6 +213,7 @@ async function processBusiness(business) {
     if (audit.websiteStatus !== 'blocked') event = audit.fetched ? EVENTS.websiteAudited : EVENTS.leadNoWebsite;
     const pushResult = event ? await Actor.pushData(row, event) : await Actor.pushData(row);
     stats.pushed++;
+    if (onlyNew) deliveredKeys.push(businessKey(business));
     if (event) stats.billable[event]++;
     if (pushResult?.eventChargeLimitReached) stopped = true;
 
@@ -265,6 +283,10 @@ try {
 }
 if (timeRanOut) log.warning(`Stopped starting new audits ${DEADLINE_MARGIN_MS / 1000} s before the run's time limit, so the run ends with the businesses already audited.`);
 
+if (seenStore && deliveredKeys.length) {
+    await seenStore.setValue(SEEN_KEY, [...seenBefore, ...deliveredKeys].slice(-SEEN_LIMIT));
+}
+
 // Never end with an empty dataset: say why nothing was saved, in one uncharged row.
 if (stats.pushed === 0 && !sourceProblem) {
     const note = emptyRunNote(stats, counters, options, search, search ? (search.term ?? CATEGORIES[search.category].title) : undefined);
@@ -288,7 +310,7 @@ log.info('Summary', {
     rowsPushed: stats.pushed,
     filteredOutBelowMinScore: stats.filteredOut,
     filteredOutUnaudited: stats.filteredOutUnaudited,
-    skipped: { permanentlyClosed: counters.skippedClosed, empty: counters.skippedEmpty, duplicates: counters.duplicates, hasWebsite: stats.skippedHasWebsite, errors: stats.errors },
+    skipped: { permanentlyClosed: counters.skippedClosed, empty: counters.skippedEmpty, duplicates: counters.duplicates, hasWebsite: stats.skippedHasWebsite, returnedBefore: stats.skippedSeen + (counters.search.seen ?? 0), errors: stats.errors },
     ...(search ? { search: { source: counters.search.source === 'google_maps' ? 'Google Maps' : 'Overture Maps', fellBackFromGoogle: counters.search.fellBack ?? null, place: counters.search.place, found: counters.search.found, noWebsiteListed: counters.search.noWebsiteListed, chains: counters.search.chains, overMaxBusinesses: counters.search.overLimit } } : {}),
     stoppedBeforeTimeLimit: timeRanOut,
     billableEvents: stats.billable, // what was charged, once pricing is active
@@ -302,6 +324,7 @@ const searchNote = search && counters.search.source
 await Actor.setStatusMessage(
     `${searchNote}Audited ${stats.processed} businesses: ${s.none} without a website, ${s.broken} broken, ${s.social_only} social only, `
     + `${s.dead_builder} on dead builders, ${s.blocked} couldn't be audited; average score ${averageScore ?? 'n/a'}. ${stats.pushed} rows saved.`
+    + `${onlyNew && (stats.skippedSeen + (counters.search.seen ?? 0)) ? ` ${stats.skippedSeen + (counters.search.seen ?? 0)} returned by earlier runs were skipped.` : ''}`
     + `${timeRanOut ? " Stopped early to finish within the run's time limit; run again with the same input or a longer limit for the rest." : ''}`,
     { isStatusMessageTerminal: true },
 );
