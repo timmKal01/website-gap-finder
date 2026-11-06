@@ -120,6 +120,12 @@
             "default": false,
             "description": "For scheduled runs: skip businesses that earlier runs already returned, so each run brings only new ones. A search then reads further down the results to find them. Skipped businesses aren't audited or charged. The list is kept in the key-value store \"website-gap-finder-seen\" in your Apify account; delete it to start over."
         },
+        "seenListName": {
+            "title": "Name of the \"already returned\" list",
+            "type": "string",
+            "editor": "textfield",
+            "description": "Used with \"Only businesses not returned before\". Give each search or client its own name, e.g. \"denver-plumbers\" or \"client-acme\", to keep a separate list for each; leave empty to use one list for everything. Lowercase letters, digits and hyphens, 3 to 63 characters."
+        },
         "datasetId": {
             "title": "Dataset ID (e.g. from a Google Maps scraper)",
             "type": "string",

@@ -65,7 +65,13 @@ const onlyNoWebsite = input.onlyNoWebsite === true;
 // For scheduled runs: businesses earlier runs returned are skipped (not audited or charged), so each run brings only new
 // ones. The keys live in the buyer's own named key-value store, so they survive between runs (2026-11-05).
 const onlyNew = input.onlyNew === true;
-const seenStore = onlyNew ? await Actor.openKeyValueStore(SEEN_STORE) : null;
+// A named list per search or client (e.g. one per saved search in a lead app), so what one returned doesn't hide
+// businesses from another. Empty means the one shared list.
+const seenListName = typeof input.seenListName === 'string' ? input.seenListName.trim() : '';
+if (seenListName && !/^[a-z0-9](?:[a-z0-9-]{1,61})[a-z0-9]$/.test(seenListName)) {
+    await stopWithError(`"${seenListName}" can't be a list name. Use 3 to 63 lowercase letters, digits and hyphens, e.g. "denver-plumbers".`);
+}
+const seenStore = onlyNew ? await Actor.openKeyValueStore(seenListName || SEEN_STORE) : null;
 const seenBefore = new Set(seenStore ? (await seenStore.getValue(SEEN_KEY)) ?? [] : []);
 const isSeen = onlyNew ? (item) => seenBefore.has(businessKey(item)) : null;
 const deliveredKeys = [];

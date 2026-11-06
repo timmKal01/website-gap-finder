@@ -103,7 +103,8 @@ From 2026-11-15, a lead without a website costs $0.005, so the same example come
 | `auditDepth` | `basic` / `full` | Basic checks the homepage. Full also opens the contact page when one is linked. Default `basic`. |
 | `extractContacts` | boolean | Pull the public business email, phone and WhatsApp link from the site. Default `false`. |
 | `onlyNoWebsite` | boolean | Only businesses with no real website: none, only a social or listing page, or a dead site builder. A search reads up to 10 Google Maps listings per lead wanted, and businesses with a website are skipped, not charged. Default `false`. |
-| `onlyNew` | boolean | For scheduled runs: skip businesses that earlier runs already returned, so each run brings only new ones. A search reads further down the results to find them, and skipped businesses aren't audited or charged. The list lives in the key-value store `website-gap-finder-seen` in your Apify account; delete it to start over. Default `false`.
+| `onlyNew` | boolean | For scheduled runs: skip businesses that earlier runs already returned, so each run brings only new ones. A search reads further down the results to find them, and skipped businesses aren't audited or charged. The list lives in the key-value store `website-gap-finder-seen` in your Apify account; delete it to start over. Default `false`. |
+| `seenListName` | string | Keeps a separate "already returned" list per search or client, e.g. `denver-plumbers`, instead of one shared list. Lowercase letters, digits and hyphens. Used with `onlyNew`.
 | `onlyOpportunities` | boolean | Only save businesses scoring at least `minScore`. Sites that couldn't be audited are left out too. Default `false`. |
 | `minScore` | integer 0-100 | Default `50`. |
 | `maxConcurrency` | integer | Businesses audited at once. Default `10`. |
