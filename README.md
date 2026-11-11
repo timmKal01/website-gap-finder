@@ -8,13 +8,45 @@ For web design agencies, freelancers and lead sellers: search a city for a type 
 - `websiteStatus` for every business: `none`, `social_only` (only a Facebook or Instagram page), `broken`, `dead_builder`, `free_subdomain`, `blocked` or `ok`
 - `opportunityScore` (0 to 100), the `opportunityReasons` behind it, and a ready `pitchAngle` sentence
 - For sites that load: HTTPS, mobile layout, load time, the last copyright year, tech stack (WordPress, Wix, Shopify and more) and online booking, with the provider's name
-- With `extractContacts` on: the public business email, phone and WhatsApp link from the site
+- With `extractContacts` on: the public business email, phone and WhatsApp link from the site, plus every email address and phone number it found (`emails`, `phones`)
+- Full Google Maps details for searched businesses: every category, rating and review count, opening hours and map coordinates
 
 Every listed website is actually opened, so a business whose domain has expired, is parked or no longer loads counts as a lead, not as a business that "has a website".
 
+## Two more ways to use it
+
+**Google Maps leads with contacts.** Search a business type and a city, leave `onlyOpportunities` off and turn `extractContacts` on. Every business comes back with its phone numbers, email, website, social profiles, rating, reviews, opening hours and coordinates, plus the website audit. A real row from a local test on 2026-11-11 (plumbers in Denver, CO, with `auditDepth` `full`, shortened):
+
+```json
+{
+  "name": "Absolute Plumbing, Electrical, Heating & Air",
+  "category": "Plumber",
+  "categories": ["Plumber", "Air conditioning contractor", "Air conditioning repair service"],
+  "phone": "+17209542939",
+  "phones": ["+17208075715"],
+  "publicEmail": "booking@absolutefix.com",
+  "emails": ["booking@absolutefix.com"],
+  "rating": 4.8,
+  "reviewCount": 3997,
+  "hours": ["Tuesday: Open 24 hours", "Wednesday: Open 24 hours"],
+  "latitude": 39.797844,
+  "longitude": -104.8651943,
+  "socialLinks": { "facebook": "https://www.facebook.com/absolutefix", "linkedin": "https://www.linkedin.com/company/absolute-electrical-heating-and-air" },
+  "websiteUrl": "https://absolutefix.com/service-area/denver/",
+  "websiteStatus": "ok",
+  "opportunityScore": 10
+}
+```
+
+`phone` is the number on Google Maps; `phones` are the numbers on the business's own site. Only business addresses are kept in `emails` (role mailboxes like info@ or booking@, or ones carrying the business name), never a staff member's own.
+
+A business with a website and contact details costs $0.004 ($0.003 for the audit and $0.001 for the contacts).
+
+**Emails and phone numbers from your own list of websites.** Put the sites in `businesses` (`{ "website": "https://..." }` is enough, no name needed), turn `extractContacts` on, and set `auditDepth` to `full` so each site's contact page is read too. You get every email and phone number found, the business email picked from them, social profiles, and the audit.
+
 ## Example output
 
-Real output from a run on Apify on 2026-10-22, checking 5 local businesses in 5 countries: a nail salon in New York, a bakery in Toronto, a restaurant in Cape Town, an electrician in Berlin and a dental practice in Sydney. The salon's name, website and phone number are hidden here; every other field shown is exactly what the run returned.
+Real output from a run on Apify on 2026-10-22 (before `categories`, `latitude`, `longitude`, `hours`, `emails` and `phones` were added), checking 5 local businesses in 5 countries: a nail salon in New York, a bakery in Toronto, a restaurant in Cape Town, an electrician in Berlin and a dental practice in Sydney. The salon's name, website and phone number are hidden here; every other field shown is exactly what the run returned.
 
 ```json
 {
@@ -88,6 +120,8 @@ From 2026-11-15, a lead without a website costs $0.005, so the same example come
 - **Web designers:** search "Hair salons and barbers" in your city, or run a Google Maps scraper for it, keep everything scoring 50 or more, and work down the list.
 - **SEO and marketing consultants:** find businesses whose sites lack HTTPS, a mobile layout or online booking, and pitch the fix.
 - **Lead sellers:** hand clients a scored list with a reason and a pitch line on every row, not a raw directory dump.
+- **Sales teams:** Google Maps leads for any business type and city, with phones, emails, social profiles, ratings and hours.
+- **Contact enrichment:** a list of company websites in, every public email and phone number out.
 
 ## Input
 
@@ -99,9 +133,9 @@ From 2026-11-15, a lead without a website costs $0.005, so the same example come
 | `searchLocations` | array | More places to search in the same run, up to 25 in all. A business found in two places is kept once, and a place that can't be found gets its own uncharged row while the rest still run. |
 | `maxBusinesses` | integer | The most businesses the search audits in each place, which also caps its cost. Default `100`, up to `2000`. |
 | `datasetId` | string | ID of a dataset from another actor, such as a Google Maps scraper run. Field names are mapped automatically: `title`/`name`, `website`/`url`, `phone`, `address`, `city`, `countryCode`, `categoryName`, `totalScore`/`rating`, `reviewsCount`, and the Google Maps `url`. Permanently closed places and duplicates are skipped. |
-| `businesses` | array | Your own list: `name`, `website`, and optionally `phone`, `address`, `city`, `country` (name or 2-letter code) and `category`. |
+| `businesses` | array | Your own list: `name`, `website`, and optionally `phone`, `address`, `city`, `country` (name or 2-letter code) and `category`. A list of websites alone works too, e.g. to pull contacts. |
 | `auditDepth` | `basic` / `full` | Basic checks the homepage. Full also opens the contact page when one is linked. Default `basic`. |
-| `extractContacts` | boolean | Pull the public business email, phone and WhatsApp link from the site. Default `false`. |
+| `extractContacts` | boolean | Pull the public business email, phone and WhatsApp link from the site, plus every email and phone number found (`emails`, `phones`, up to 10 each). With `auditDepth` `full`, the contact page is read too. Default `false`. |
 | `onlyNoWebsite` | boolean | Only businesses with no real website: none, only a social or listing page, or a dead site builder. A search reads up to 10 Google Maps listings per lead wanted, and businesses with a website are skipped, not charged. Default `false`. |
 | `onlyNew` | boolean | For scheduled runs: skip businesses that earlier runs already returned, so each run brings only new ones. A search reads further down the results to find them, and skipped businesses aren't audited or charged. The list lives in the key-value store `website-gap-finder-seen` in your Apify account; delete it to start over. Default `false`. |
 | `seenListName` | string | Keeps a separate "already returned" list per search or client, e.g. `denver-plumbers`, instead of one shared list. Lowercase letters, digits and hyphens. Used with `onlyNew`.
@@ -169,7 +203,6 @@ To make it automatic, add an integration to the Google Maps scraper task: **Run 
 
 ## Related tools
 
-- [Website Email & Phone Extractor](https://apify.com/m_ctim/website-lead-extractor): contact details from any list of websites
 - [Website Tech Stack Detector](https://apify.com/m_ctim/website-tech-stack-detector): what a site is built on (CMS, hosting, analytics), one row per URL
 - [Tech Stack Lead Finder](https://apify.com/m_ctim/tech-stack-lead-finder): find sites by the technology they use, for example Shopify stores without Klaviyo
 

@@ -56,6 +56,9 @@ export function googlePlaceToItem(place, { countryCode }) {
         mapsUrl: place.mapsUrl,
         rating: place.rating,
         reviewCount: place.reviewCount,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        hours: place.hours,
         permanentlyClosed: place.status === 'permanently_closed',
     };
 }

@@ -14,7 +14,9 @@ import {
     visibleText, isMobileFriendly, seoFacts, lastCopyrightYear, wordpressVersion, isPlaceholderPage,
     brokenPageReason, pageUrls, bookingInfo, socialLinks, contactPageUrl,
 } from './checks.js';
-import { extractEmails, pickBusinessEmail, pagePhones, whatsappNumber } from './contacts.js';
+import { extractEmails, businessEmails, pagePhones, whatsappNumber } from './contacts.js';
+
+const MAX_CONTACTS_LISTED = 10;
 
 const ERROR_TEXT = {
     ENOTFOUND: "domain doesn't resolve",
@@ -230,10 +232,17 @@ export async function auditWebsite(business, { auditDepth, extractContacts, coun
     else if (result.freeHost) result.websiteStatus = 'free_subdomain';
 
     if (extractContacts) {
+        // Business addresses only (role mailboxes, or ones carrying the business name), never staff members' own.
+        const emails = businessEmails(extractEmails(contactText, mailtos), { name: business.name, siteUrl: page.finalUrl });
+        const phones = pagePhones(tels, contactText, country);
         result.contacts = {
-            email: pickBusinessEmail(extractEmails(contactText, mailtos), { name: business.name, siteUrl: page.finalUrl }),
-            phone: pagePhones(tels, contactText, country)[0] ?? null,
+            email: emails[0] ?? null,
+            phone: phones[0] ?? null,
             whatsapp: whatsappNumber(urls),
+            // Every business address and number found on the homepage and contact page (2026-11-11, when the Email &
+            // Phone Extractor merged in). Capped so a directory-style page can't flood a row.
+            emails: emails.slice(0, MAX_CONTACTS_LISTED),
+            phones: phones.slice(0, MAX_CONTACTS_LISTED),
         };
     }
     return result;

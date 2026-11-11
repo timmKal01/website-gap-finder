@@ -66,6 +66,34 @@ test('a Google Maps place becomes an item, with rating, reviews and the Maps lin
     assert.deepEqual(Object.keys(GOOGLE_TERMS).sort(), Object.keys(CATEGORIES).sort());
 });
 
+test('a Google Maps place keeps the lead details Google Maps Leads had: categories, coordinates, hours', async () => {
+    const { googlePlaceToItem } = await import('../src/sources/search.js');
+    const item = googlePlaceToItem({
+        name: 'Swish Dental Downtown', website: 'https://www.swishsmiles.com/location/downtown', phone: '+15127131099',
+        address: '201 W 5th St Ste 175, Austin, TX 78701', locality: 'Austin, TX', countryCode: 'US',
+        categories: ['Dentist', 'Cosmetic dentist'], placeId: 'ChIJd', mapsUrl: 'https://www.google.com/maps?cid=2',
+        rating: 4.5, reviewCount: 987, latitude: 30.2674035, longitude: -97.7451433,
+        hours: ['Saturday: Closed', 'Monday: 9 AM–6 PM'], status: 'open',
+    }, { countryCode: 'US' });
+    const r = toBusinessRecord(item);
+    assert.deepEqual(r.categories, ['Dentist', 'Cosmetic dentist']);
+    assert.equal(r.latitude, 30.2674035);
+    assert.equal(r.longitude, -97.7451433);
+    assert.deepEqual(r.hours, ['Saturday: Closed', 'Monday: 9 AM–6 PM']);
+});
+
+test('scraper datasets: location and openingHours objects become coordinates and hour strings', () => {
+    const r = toBusinessRecord({
+        title: 'Glow Salon', website: 'https://glowsalon.co.ke', location: { lat: -1.2864, lng: 36.8172 },
+        openingHours: [{ day: 'Monday', hours: '8 AM to 8 PM' }, { day: 'Sunday', hours: 'Closed' }],
+    });
+    assert.equal(r.latitude, -1.2864);
+    assert.equal(r.longitude, 36.8172);
+    assert.deepEqual(r.hours, ['Monday: 8 AM to 8 PM', 'Sunday: Closed']);
+    assert.deepEqual(toBusinessRecord({ name: 'Plain', website: 'https://plain.example' }).categories, []);
+    assert.equal(toBusinessRecord({ name: 'Plain' }).latitude, null);
+});
+
 test('only a site of the business\'s own counts as a real website', async () => {
     const { hasRealWebsite } = await import('../src/audit/classify.js');
     assert.equal(hasRealWebsite(null), false);

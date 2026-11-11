@@ -142,7 +142,7 @@
             "title": "Businesses",
             "type": "array",
             "editor": "json",
-            "description": "Your own list of businesses. Each item needs a name and, if it has one, a website. Optional: phone, address, city, country (name or 2-letter code, used to format phone numbers internationally) and category (e.g. \"Hair salon\", used to spot missing online booking).",
+            "description": "Your own list of businesses. Each item needs a name, a website, or both (a list of websites alone works, e.g. to pull contacts). Optional: phone, address, city, country (name or 2-letter code, used to format phone numbers internationally) and category (e.g. \"Hair salon\", used to spot missing online booking).",
             "prefill": [
                 {
                     "name": "Corner Barbershop (example: no website)",
@@ -211,7 +211,7 @@
             "type": "boolean",
             "editor": "checkbox",
             "default": false,
-            "description": "Pull the business email, phone number and WhatsApp link the site publishes. Only generic business mailboxes (info@, contact@, bookings@...) or addresses carrying the business name are kept; named staff members' personal addresses are skipped. Charged per business where something was found."
+            "description": "Pull the business email, phone number and WhatsApp link the site publishes, plus every business address and phone number found (emails, phones; up to 10 each). Only generic business mailboxes (info@, contact@, bookings@...) or addresses carrying the business name are kept; named staff members' personal addresses are skipped. Charged per business where something was found."
         },
         "onlyOpportunities": {
             "title": "Only output opportunities",

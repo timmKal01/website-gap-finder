@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { toBusinessRecord, normalizeWebsite } from '../src/sources/records.js';
 import { resolveCountry, countryFromHostname, toE164 } from '../src/phone.js';
 import { profilePlatform, freeHostSuffix, deadBuilderFromHost, deadBuilderFromGenerator, domainCarriesName } from '../src/audit/classify.js';
-import { extractEmails, pickBusinessEmail, whatsappNumber } from '../src/audit/contacts.js';
+import { extractEmails, pickBusinessEmail, businessEmails, whatsappNumber } from '../src/audit/contacts.js';
 import { parseRobots, isAllowed } from '../src/robots.js';
 
 test('Google Maps scraper item: url is the Maps link, website is the site', () => {
@@ -90,4 +90,13 @@ test("a domain counts as the business's own only when it carries a distinctive w
     assert.equal(domainCarriesName('Posh Palace Hair Studio & Spa', 'https://www.welns.io/product/booking/WFRCHN000012914'), false);
     assert.equal(domainCarriesName('Glam Hair Salon', 'https://salonbookings.com/glam-hair'), false);
     assert.equal(freeHostSuffix('https://www.richmannadayspa.webs.com/'), 'webs.com');
+});
+
+test('business emails: role mailboxes and name-carrying addresses only, best first; staff addresses left out', () => {
+    const site = { name: 'Swish Dental', siteUrl: 'https://www.swishsmiles.com/location/downtown' };
+    assert.deepEqual(businessEmails(['jane@swishsmiles.com', 'swishdental@gmail.com', 'info@swishsmiles.com'], site), ['info@swishsmiles.com', 'swishdental@gmail.com']);
+    // With no business name (a plain list of websites), only role mailboxes count.
+    assert.deepEqual(businessEmails(['downtown@swishsmiles.com', 'jane.doe@swishsmiles.com', 'hello@swishsmiles.com'], { name: null, siteUrl: site.siteUrl }), ['hello@swishsmiles.com']);
+    assert.equal(pickBusinessEmail(['jane@swishsmiles.com', 'info@swishsmiles.com'], site), 'info@swishsmiles.com');
+    assert.equal(pickBusinessEmail(['someone@gmail.com'], site), null);
 });

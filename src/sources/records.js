@@ -72,5 +72,22 @@ export function toBusinessRecord(item) {
         reviewCount: toInt(pick(item, 'reviewsCount', 'reviewCount', 'userRatingsTotal', 'numberOfReviews')),
         placeId: clean(pick(item, 'placeId', 'place_id', 'cid', 'googlePlaceId')),
         permanentlyClosed: item?.permanentlyClosed === true || item?.businessStatus === 'CLOSED_PERMANENTLY',
+        // Lead details carried through to the row (2026-11-11, when Google Maps Leads merged in).
+        categories: categories.map(clean).filter(Boolean),
+        latitude: toNumber(pick(item, 'latitude', 'lat') ?? item?.location?.lat),
+        longitude: toNumber(pick(item, 'longitude', 'lng', 'lon') ?? item?.location?.lng ?? item?.location?.lon),
+        hours: openingHours(item),
     };
+}
+
+/**
+ * Opening hours as one string per day ("Monday: 9 AM-6 PM"), from either a list of strings (our Google Maps search)
+ * or Google Maps scraper datasets' [{ day, hours }] objects. Empty when the source has none.
+ */
+export function openingHours(item) {
+    const raw = Array.isArray(item?.hours) ? item.hours : Array.isArray(item?.openingHours) ? item.openingHours : [];
+    return raw
+        .map((h) => (typeof h === 'string' ? h : h && typeof h === 'object' && h.day ? `${h.day}: ${h.hours ?? ''}`.trim() : null))
+        .map(clean)
+        .filter(Boolean);
 }

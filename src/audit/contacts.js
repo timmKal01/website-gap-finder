@@ -82,6 +82,14 @@ function nameTokens(name, siteDomain) {
  * third parties' addresses (the web designer's) are skipped.
  */
 export function pickBusinessEmail(emails, { name, siteUrl }) {
+    return businessEmails(emails, { name, siteUrl })[0] ?? null;
+}
+
+/**
+ * Every business address among `emails`, best first: role mailboxes and addresses carrying the business name. Other
+ * addresses (which may be a staff member's own) are left out, the same rule as pickBusinessEmail.
+ */
+export function businessEmails(emails, { name, siteUrl }) {
     const siteDomain = siteUrl ? getDomain(new URL(siteUrl).hostname) : null;
     const tokens = nameTokens(name, siteDomain);
     const ranked = [];
@@ -99,7 +107,7 @@ export function pickBusinessEmail(emails, { name, siteUrl }) {
         else if (carriesName) ranked.push([4, email]); // e.g. joesplumbing@btconnect.com
     }
     ranked.sort((a, b) => a[0] - b[0]);
-    return ranked[0]?.[1] ?? null;
+    return ranked.map(([, email]) => email);
 }
 
 // ---------- phones and WhatsApp ----------
