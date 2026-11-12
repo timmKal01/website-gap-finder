@@ -203,8 +203,7 @@ To make it automatic, add an integration to the Google Maps scraper task: **Run 
 
 ## Related tools
 
-- [Website Tech Stack Detector](https://apify.com/m_ctim/website-tech-stack-detector): what a site is built on (CMS, hosting, analytics), one row per URL
-- [Tech Stack Lead Finder](https://apify.com/m_ctim/tech-stack-lead-finder): find sites by the technology they use, for example Shopify stores without Klaviyo
+- [Tech Stack Detector & Lead Finder](https://apify.com/m_ctim/tech-stack-lead-finder): what any site is built on (CMS, hosting, analytics), or sites found by the tools they use, for example Shopify stores without Klaviyo
 
 ## Notes
 
