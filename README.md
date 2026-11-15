@@ -1,4 +1,4 @@
-# Website Gap Finder: Businesses Without Websites + Audit
+# Google Maps No-Website Leads: Businesses Without Websites
 
 For web design agencies, freelancers and lead sellers: search a city for a type of business, or give it the businesses from a Google Maps scrape (or your own list), and get back which ones have no working website, a broken one or an outdated one, each scored 0 to 100 with a one-line pitch to open your outreach with.
 
